@@ -1,12 +1,13 @@
 # build wut
-FROM devkitpro/devkitppc:20220531 AS wutbuild
+FROM devkitpro/devkitppc:20220531 AS ctrubuild
 
-ENV PATH=$DEVKITPPC/bin:$PATH
+ENV PATH=$DEVKITARM/bin:$PATH
 
 WORKDIR /
-RUN git clone https://github.com/devkitPro/wut
-WORKDIR /wut
-RUN git checkout f1b5da996f4c4a58beb3d3ab93aa8e8b9f66e775
+RUN git clone https://github.com/devkitPro/libctru
+WORKDIR /libctru
+RUN git checkout 0cbae436c860e816f21bb01549f745d3dc16537b
+WORKDIR /libctru/libctru
 RUN make -j$(nproc)
 RUN make install
 WORKDIR /
@@ -15,21 +16,21 @@ WORKDIR /
 FROM devkitpro/devkitppc:20220531 AS builder
 
 RUN apt-get update && apt-get -y install --no-install-recommends wget tar autoconf automake libtool && rm -rf /var/lib/apt/lists/*
-COPY --from=wutbuild /opt/devkitpro/wut /opt/devkitpro/wut
+COPY --from=ctrubuild /opt/devkitpro/libctru /opt/devkitpro/ctru
 
 # build SDL2
 FROM builder AS sdlbuild
-ENV WUT_ROOT=$DEVKITPRO/wut
+#ENV CTRU_ROOT=$DEVKITPRO/libctru
 
-RUN git clone -b wiiu-2.0.9 --single-branch https://github.com/yawut/SDL
+RUN git clone -b wiiu-2.0.9 --single-branch https://github.com/devkitPro/SDL
 WORKDIR /SDL
 RUN mkdir build
 WORKDIR /SDL/build
 
 # Need to set CFLAGS manually for now until issues with SDL and wiiu-cmake get resolved
-ENV CFLAGS="-mcpu=750 -meabi -mhard-float -ffunction-sections -fdata-sections -DESPRESSO -D__WIIU__ -D__WUT__ -O3"
+#ENV CFLAGS="-mcpu=750 -meabi -mhard-float -ffunction-sections -fdata-sections -DESPRESSO -D__WIIU__ -D__WUT__ -O3"
 
-RUN /opt/devkitpro/portlibs/wiiu/bin/powerpc-eabi-cmake .. -DCMAKE_INSTALL_PREFIX=$DEVKITPRO/portlibs/wiiu -DCMAKE_BUILD_TYPE=Release
+RUN cmake .. -DCMAKE_TOOLCHAIN_FILE="$DEVKITPRO/cmake/3DS.cmake" -DCMAKE_INSTALL_PREFIX=$DEVKITPRO/portlibs/3ds -DCMAKE_BUILD_TYPE=Release
 RUN make -j$(nproc) && make install
 WORKDIR /
 
