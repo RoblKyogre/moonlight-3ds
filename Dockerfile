@@ -1,34 +1,16 @@
-# build wut
-FROM devkitpro/devkitppc:20220531 AS ctrubuild
-
-ENV PATH=$DEVKITARM/bin:$PATH
-
-WORKDIR /
-RUN git clone https://github.com/devkitPro/libctru
-WORKDIR /libctru
-RUN git checkout 0cbae436c860e816f21bb01549f745d3dc16537b
-WORKDIR /libctru/libctru
-RUN make -j$(nproc)
-RUN make install
-WORKDIR /
-
 # set up builder image
-FROM devkitpro/devkitppc:20220531 AS builder
+FROM devkitpro/devkitarm:20230526 AS builder
 
 RUN apt-get update && apt-get -y install --no-install-recommends wget tar autoconf automake libtool && rm -rf /var/lib/apt/lists/*
-COPY --from=ctrubuild /opt/devkitpro/libctru /opt/devkitpro/ctru
 
 # build SDL2
+# devkitpro only provides SDL 1.2, we need to use SDL2
 FROM builder AS sdlbuild
-#ENV CTRU_ROOT=$DEVKITPRO/libctru
 
-RUN git clone -b wiiu-2.0.9 --single-branch https://github.com/devkitPro/SDL
+RUN git clone -b main --single-branch https://github.com/devkitPro/SDL
 WORKDIR /SDL
 RUN mkdir build
 WORKDIR /SDL/build
-
-# Need to set CFLAGS manually for now until issues with SDL and wiiu-cmake get resolved
-#ENV CFLAGS="-mcpu=750 -meabi -mhard-float -ffunction-sections -fdata-sections -DESPRESSO -D__WIIU__ -D__WUT__ -O3"
 
 RUN cmake .. -DCMAKE_TOOLCHAIN_FILE="$DEVKITPRO/cmake/3DS.cmake" -DCMAKE_INSTALL_PREFIX=$DEVKITPRO/portlibs/3ds -DCMAKE_BUILD_TYPE=Release
 RUN make -j$(nproc) && make install
@@ -49,25 +31,25 @@ index 61c6689..efe686a 100644\n\
          shared_extension => ".so",\n\
      },\n\
  \n\
-+### Wii U target\n\
-+    "wiiu" => {\n\
++### 3DS target\n\
++    "3ds" => {\n\
 +        inherit_from     => [ "BASE_unix" ],\n\
-+        CC               => "$ENV{DEVKITPPC}/bin/powerpc-eabi-gcc",\n\
-+        CXX              => "$ENV{DEVKITPPC}/bin/powerpc-eabi-g++",\n\
-+        AR               => "$ENV{DEVKITPPC}/bin/powerpc-eabi-ar",\n\
++        CC               => "$ENV{DEVKITARM}/bin/arm-none-eabi-gcc",\n\
++        CXX              => "$ENV{DEVKITARM}/bin/arm-none-eabi-g++",\n\
++        AR               => "$ENV{DEVKITARM}/bin/arm-none-eabi-ar",\n\
 +        CFLAGS           => picker(default => "-Wall",\n\
 +                                   debug   => "-O0 -g",\n\
 +                                   release => "-O3"),\n\
 +        CXXFLAGS         => picker(default => "-Wall",\n\
 +                                   debug   => "-O0 -g",\n\
 +                                   release => "-O3"),\n\
-+        LDFLAGS          => "-L$ENV{DEVKITPRO}/wut/lib",\n\
-+        cflags           => add("-mcpu=750 -meabi -mhard-float -ffunction-sections -fdata-sections"),\n\
-+        cxxflags         => add("-std=c++11"),\n\
-+        lib_cppflags     => "-DOPENSSL_USE_NODELETE -DB_ENDIAN -DNO_SYS_UN_H -DNO_SYSLOG -D__WIIU__ -D__WUT__ -I$ENV{DEVKITPRO}/wut/include",\n\
-+        ex_libs          => add("-lwut -lm"),\n\
++        LDFLAGS          => "-L$ENV{DEVKITPRO}/libctru/lib",\n\
++        cflags           => add("-mcpu=750 -meabi -mhard-float -mword-relocations -ffunction-sections -fdata-sections"),\n\
++        cxxflags         => add("-fno-rtti -fno-exceptions -std=c++11"),\n\
++        lib_cppflags     => "-DOPENSSL_USE_NODELETE -DB_ENDIAN -DNO_SYS_UN_H -DNO_SYSLOG -D__3DS__ -I$ENV{DEVKITPRO}/libctru/include",\n\
++        ex_libs          => add("-lctru -lm"),\n\
 +        bn_ops           => "BN_LLONG RC4_CHAR",\n\
-+        asm_arch         => '"'"'ppc32'"'"',\n\
++        asm_arch         => '"'"'armv6k'"'"',\n\
 +    },\n\
 +\n ####\n #### Variety of LINUX:-)\n ####\n\
 diff --git a/crypto/rand/rand_unix.c b/crypto/rand/rand_unix.c\n\
@@ -78,7 +60,7 @@ index 0f45251..d303e8e 100644\n\
  {\n\
  }\n\
  \n\
-+# elif defined(__WIIU__)\n\
++# elif defined(__3DS__)\n\
 +\n\
 +#include <coreinit/time.h>\n\
 +\n\
@@ -125,9 +107,9 @@ index a9eae36..4a81d98 100644\n\
  \n\
  int OPENSSL_issetugid(void)\n\
  {\
-' >> wiiu.patch && git apply wiiu.patch
+' >> 3ds.patch && git apply 3ds.patch
 
-RUN ./Configure wiiu \
+RUN ./Configure 3ds \
   no-threads no-shared no-asm no-ui-console no-unit-test no-tests no-buildtest-c++ no-external-tests no-autoload-config \
   --with-rand-seed=os -static
 
@@ -135,47 +117,7 @@ RUN make build_generated
 RUN make libssl.a libcrypto.a -j$(nproc)
 WORKDIR /
 
-# build curl
-FROM builder as curlbuild
-ARG curl_ver=7.84.0
-
-# copy in openssl
-COPY --from=opensslbuild /openssl/libcrypto.a /openssl/libssl.a /opt/devkitpro/portlibs/wiiu/lib/
-COPY --from=opensslbuild /openssl/include/openssl /opt/devkitpro/portlibs/wiiu/include/openssl/
-COPY --from=opensslbuild /openssl/include/crypto /opt/devkitpro/portlibs/wiiu/include/crypto/
-
-RUN wget https://curl.se/download/curl-$curl_ver.tar.gz && mkdir /curl && tar xf curl-$curl_ver.tar.gz -C /curl --strip-components=1
-WORKDIR /curl
-
-ENV CFLAGS "-mcpu=750 -meabi -mhard-float -O3 -ffunction-sections -fdata-sections"
-ENV CXXFLAGS "${CFLAGS}"
-ENV CPPFLAGS "-D__WIIU__ -D__WUT__ -I${DEVKITPRO}/wut/include"
-ENV LDFLAGS "-L${DEVKITPRO}/wut/lib"
-ENV LIBS "-lwut -lm"
-
-RUN autoreconf -fi
-RUN ./configure \
---prefix=$DEVKITPRO/portlibs/wiiu/ \
---host=powerpc-eabi \
---enable-static \
---disable-threaded-resolver \
---disable-pthreads \
---with-ssl=$DEVKITPRO/portlibs/wiiu/ \
---disable-ipv6 \
---disable-unix-sockets \
---disable-socketpair \
---disable-ntlm-wb \
-CC=$DEVKITPPC/bin/powerpc-eabi-gcc \
-AR=$DEVKITPPC/bin/powerpc-eabi-ar \
-RANLIB=$DEVKITPPC/bin/powerpc-eabi-ranlib \
-PKG_CONFIG=$DEVKITPRO/portlibs/wiiu/bin/powerpc-eabi-pkg-config
-
-WORKDIR /curl/lib
-RUN make -j$(nproc) install
-WORKDIR /curl/include
-RUN make -j$(nproc) install
-WORKDIR /
-
+# build expat
 FROM builder as expatbuild
 ARG expat_tag=2_4_8
 ARG expat_ver=2.4.8
@@ -183,80 +125,46 @@ ARG expat_ver=2.4.8
 RUN wget https://github.com/libexpat/libexpat/releases/download/R_$expat_tag/expat-$expat_ver.tar.gz && mkdir /expat && tar xf expat-$expat_ver.tar.gz -C /expat --strip-components=1
 WORKDIR /expat
 
-ENV CFLAGS "-mcpu=750 -meabi -mhard-float -O3 -ffunction-sections -fdata-sections"
-ENV CXXFLAGS "${CFLAGS}"
-ENV CPPFLAGS "-D__WIIU__ -D__WUT__ -I${DEVKITPRO}/wut/include"
-ENV LDFLAGS "-L${DEVKITPRO}/wut/lib"
-ENV LIBS "-lwut -lm"
+ENV CFLAGS "-mcpu=750 -meabi -mhard-float -O3 -mword-relocations -ffunction-sections -fdata-sections"
+ENV CXXFLAGS "${CFLAGS} -fno-rtti -fno-exceptions -std=gnu++11"
+ENV CPPFLAGS "-D__3DS__ -I${DEVKITPRO}/libctru/include"
+ENV LDFLAGS "-L${DEVKITPRO}/libctru/lib"
+ENV LIBS "-lctru -lm"
 
 RUN autoreconf -fi
 RUN ./configure \
---prefix=$DEVKITPRO/portlibs/wiiu/ \
---host=powerpc-eabi \
+--prefix=$DEVKITPRO/portlibs/3ds/ \
+--host=arm-none-eabi \
 --enable-static \
 --without-examples \
 --without-tests \
 --without-docbook \
-CC=$DEVKITPPC/bin/powerpc-eabi-gcc \
-AR=$DEVKITPPC/bin/powerpc-eabi-ar \
-RANLIB=$DEVKITPPC/bin/powerpc-eabi-ranlib \
-PKG_CONFIG=$DEVKITPRO/portlibs/wiiu/bin/powerpc-eabi-pkg-config
+CC=$DEVKITPPC/bin/arm-none-eabi-gcc \
+AR=$DEVKITPPC/bin/arm-none-eabi-ar \
+RANLIB=$DEVKITPPC/bin/arm-none-eabi-ranlib \
+PKG_CONFIG=$DEVKITPRO/portlibs/3ds/bin/arm-none-eabi-pkg-config
 
 RUN make -j$(nproc) && make install
 WORKDIR /
 
-FROM builder as opusbuild
-ARG opus_ver=1.1.2
-
-RUN wget https://github.com/xiph/opus/releases/download/v$opus_ver/opus-$opus_ver.tar.gz && mkdir /opus && tar xf opus-$opus_ver.tar.gz -C /opus --strip-components=1
-WORKDIR /opus
-
-ENV CFLAGS "-mcpu=750 -meabi -mhard-float -O3 -ffunction-sections -fdata-sections"
-ENV CXXFLAGS "${CFLAGS}"
-ENV CPPFLAGS "-D__WIIU__ -D__WUT__ -I${DEVKITPRO}/wut/include"
-ENV LDFLAGS "-L${DEVKITPRO}/wut/lib"
-ENV LIBS "-lwut -lm"
-
-RUN ./configure \
---prefix=$DEVKITPRO/portlibs/wiiu/ \
---host=powerpc-eabi \
---enable-static \
---disable-doc \
---disable-extra-programs \
-CC=$DEVKITPPC/bin/powerpc-eabi-gcc \
-AR=$DEVKITPPC/bin/powerpc-eabi-ar \
-RANLIB=$DEVKITPPC/bin/powerpc-eabi-ranlib \
-PKG_CONFIG=$DEVKITPRO/portlibs/wiiu/bin/powerpc-eabi-pkg-config \
-CFLAGS="$CFLAGS -Wno-expansion-to-defined"
-RUN make -j$(nproc) && make install
-
 # build final container
-FROM devkitpro/devkitppc:20220531 AS final
-
-# copy in wut
-COPY --from=wutbuild /opt/devkitpro/wut /opt/devkitpro/wut
+# libopus, curl, openssl?, expat
+# opus and curl are already provided, expat and openssl need to be built
+FROM devkitpro/devkitarm:20230526 AS final
 
 # copy in SDL2
-COPY --from=sdlbuild /opt/devkitpro/portlibs/wiiu/lib/libSDL2.a /opt/devkitpro/portlibs/wiiu/lib/
-COPY --from=sdlbuild /opt/devkitpro/portlibs/wiiu/include/SDL2 /opt/devkitpro/portlibs/wiiu/include/SDL2/
+COPY --from=sdlbuild /opt/devkitpro/portlibs/3ds/lib/libSDL2.a /opt/devkitpro/portlibs/3ds/lib/
+COPY --from=sdlbuild /opt/devkitpro/portlibs/3ds/include/SDL2 /opt/devkitpro/portlibs/3ds/include/SDL2/
 
 # copy in openssl
-COPY --from=opensslbuild /openssl/libcrypto.a /openssl/libssl.a /opt/devkitpro/portlibs/wiiu/lib/
-COPY --from=opensslbuild /openssl/include/openssl /opt/devkitpro/portlibs/wiiu/include/openssl/
-COPY --from=opensslbuild /openssl/include/crypto /opt/devkitpro/portlibs/wiiu/include/crypto/
-
-# copy in curl
-COPY --from=curlbuild /opt/devkitpro/portlibs/wiiu/lib/libcurl.a /opt/devkitpro/portlibs/wiiu/lib/
-COPY --from=curlbuild /opt/devkitpro/portlibs/wiiu/include/curl /opt/devkitpro/portlibs/wiiu/include/curl/
+COPY --from=opensslbuild /openssl/libcrypto.a /openssl/libssl.a /opt/devkitpro/portlibs/3ds/lib/
+COPY --from=opensslbuild /openssl/include/openssl /opt/devkitpro/portlibs/3ds/include/openssl/
+COPY --from=opensslbuild /openssl/include/crypto /opt/devkitpro/portlibs/3ds/include/crypto/
 
 # copy in expat
-COPY --from=expatbuild /opt/devkitpro/portlibs/wiiu/lib/libexpat.a /opt/devkitpro/portlibs/wiiu/lib/
-COPY --from=expatbuild /opt/devkitpro/portlibs/wiiu/include/expat.h /opt/devkitpro/portlibs/wiiu/include/expat.h
-COPY --from=expatbuild /opt/devkitpro/portlibs/wiiu/include/expat_config.h /opt/devkitpro/portlibs/wiiu/include/expat_config.h
-COPY --from=expatbuild /opt/devkitpro/portlibs/wiiu/include/expat_external.h /opt/devkitpro/portlibs/wiiu/include/expat_external.h
-
-# copy in opus
-COPY --from=opusbuild /opt/devkitpro/portlibs/wiiu/lib/libopus.a /opt/devkitpro/portlibs/wiiu/lib/
-COPY --from=opusbuild /opt/devkitpro/portlibs/wiiu/include/opus /opt/devkitpro/portlibs/wiiu/include/opus/
+COPY --from=expatbuild /opt/devkitpro/portlibs/wiiu/lib/libexpat.a /opt/devkitpro/portlibs/3ds/lib/
+COPY --from=expatbuild /opt/devkitpro/portlibs/wiiu/include/expat.h /opt/devkitpro/portlibs/3ds/include/expat.h
+COPY --from=expatbuild /opt/devkitpro/portlibs/wiiu/include/expat_config.h /opt/devkitpro/portlibs/3ds/include/expat_config.h
+COPY --from=expatbuild /opt/devkitpro/portlibs/wiiu/include/expat_external.h /opt/devkitpro/portlibs/3ds/include/expat_external.h
 
 WORKDIR /project
