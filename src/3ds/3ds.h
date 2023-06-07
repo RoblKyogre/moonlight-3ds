@@ -20,7 +20,8 @@ enum {
 #include <Limelight.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include "font.h"
+#include <3ds/types.h>
+//#include "font.h"
 
 //#include <gx2/texture.h>
 
@@ -44,7 +45,7 @@ typedef struct {
 } yuv_texture_t;
 
 void* get_frame(void);
-void add_frame(yuv_texture_t* msg);
+void add_frame(u32** msg);
 
 extern uint32_t nextFrame;
 

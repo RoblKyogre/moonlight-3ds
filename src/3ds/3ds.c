@@ -5,20 +5,22 @@
 #include <malloc.h>
 #include <stdarg.h>
 
-#include <whb/proc.h>
-#include <whb/gfx.h>
-#include <coreinit/fastmutex.h>
-#include <gx2/mem.h>
-#include <gx2/draw.h>
-#include <gx2/registers.h>
 
-#include "shaders/display.h"
+//#include <whb/proc.h>
+//#include <3ds/gfx.h>
+#include <3ds/synchronization.h>
+//#include <gx2/mem.h>
+//#include <gx2/draw.h>
+//#include <gx2/registers.h>
+
+//#include "shaders/display.h"
+
 
 #define ATTRIB_SIZE (8 * 2 * sizeof(float))
 #define ATTRIB_STRIDE (4 * sizeof(float))
 
 static GX2Sampler screenSamp;
-static WHBGfxShaderGroup shaderGroup;
+//static WHBGfxShaderGroup shaderGroup;
 
 static float* tvAttribs;
 static float* drcAttribs;
@@ -29,7 +31,7 @@ static float drcScreenSize[2];
 uint32_t currentFrame;
 uint32_t nextFrame;
 
-static OSFastMutex queueMutex;
+static RecursiveLock queueMutex;
 static yuv_texture_t* queueMessages[MAX_QUEUEMESSAGES];
 static uint32_t queueWriteIndex;
 static uint32_t queueReadIndex;
@@ -38,12 +40,12 @@ void ds_stream_init(uint32_t width, uint32_t height)
 {
   currentFrame = nextFrame = 0;
 
-  OSFastMutex_Init(&queueMutex, "");
+  RecursiveLock_Init(&queueMutex);
   queueReadIndex = queueWriteIndex = 0;
 
-  if (!WHBGfxLoadGFDShaderGroup(&shaderGroup, 0, display_gsh)) {
+  /*if (!WHBGfxLoadGFDShaderGroup(&shaderGroup, 0, display_gsh)) {
     printf("Cannot load shader\n");
-  }
+  }*/
 
   WHBGfxInitShaderAttribute(&shaderGroup, "in_pos", 0, 0, GX2_ATTRIB_FORMAT_FLOAT_32_32);
   WHBGfxInitShaderAttribute(&shaderGroup, "in_texCoord", 0, 8, GX2_ATTRIB_FORMAT_FLOAT_32_32);
@@ -95,7 +97,7 @@ void ds_stream_init(uint32_t width, uint32_t height)
   GX2Invalidate(GX2_INVALIDATE_MODE_CPU_ATTRIBUTE_BUFFER, drcAttribs, ATTRIB_SIZE);
 }
 
-void wiiu_stream_draw(void)
+void ds_stream_draw(void)
 {
   yuv_texture_t* tex = get_frame();
   if (tex) {
@@ -103,54 +105,15 @@ void wiiu_stream_draw(void)
       // display thread is behind decoder, skip frame
     }
     else {
-      WHBGfxBeginRender();
-
-      // TV
-      WHBGfxBeginRenderTV();
-      WHBGfxClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-
-      GX2SetPixelTexture(&tex->yTex, 0);
-      GX2SetPixelTexture(&tex->uvTex, 1);
-      GX2SetPixelSampler(&screenSamp, 0);
-      GX2SetPixelSampler(&screenSamp, 1);
-
-      GX2SetFetchShader(&shaderGroup.fetchShader);
-      GX2SetVertexShader(shaderGroup.vertexShader);
-      GX2SetPixelShader(shaderGroup.pixelShader);
-
-      GX2SetVertexUniformReg(0, 2, tvScreenSize);
-      GX2SetAttribBuffer(0, ATTRIB_SIZE, ATTRIB_STRIDE, tvAttribs);
-      GX2DrawEx(GX2_PRIMITIVE_MODE_QUADS, 4, 0, 1);
-
-      WHBGfxFinishRenderTV();
-
-      // DRC
-      WHBGfxBeginRenderDRC();
-      WHBGfxClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-
-      GX2SetPixelTexture(&tex->yTex, 0);
-      GX2SetPixelTexture(&tex->uvTex, 1);
-      GX2SetPixelSampler(&screenSamp, 0);
-      GX2SetPixelSampler(&screenSamp, 1);
-
-      GX2SetFetchShader(&shaderGroup.fetchShader);
-      GX2SetVertexShader(shaderGroup.vertexShader);
-      GX2SetPixelShader(shaderGroup.pixelShader);
-
-      GX2SetVertexUniformReg(0, 2, drcScreenSize);
-      GX2SetAttribBuffer(0, ATTRIB_SIZE, ATTRIB_STRIDE, drcAttribs);
-      GX2DrawEx(GX2_PRIMITIVE_MODE_QUADS, 4, 0, 1);
-      
-      WHBGfxFinishRenderDRC();
-
-      WHBGfxFinishRender();
+      u8* fb = gfxGetFramebuffer(GFX_TOP, GFX_LEFT, NULL, NULL);
+      memcpy(fb, buffer?, 400*240*2); // i need to somehow obtain a buffer address and a buffer size
     }
   }
 }
 
-void wiiu_stream_fini(void)
+void ds_stream_fini(void)
 {
-  free(tvAttribs);
+  free(tvAttribsyuv_texture_t);
   free(drcAttribs);
 
   WHBGfxFreeShaderGroup(&shaderGroup);
@@ -158,38 +121,38 @@ void wiiu_stream_fini(void)
 
 void* get_frame(void)
 {
-  OSFastMutex_Lock(&queueMutex);
+  RecursiveLock_Lock(&queueMutex);
 
   uint32_t elements_in = queueWriteIndex - queueReadIndex;
   if(elements_in == 0) {
-    OSFastMutex_Unlock(&queueMutex);
+    RecursiveLock_Unlock(&queueMutex);
     return NULL; // framequeue is empty
   }
 
   uint32_t i = (queueReadIndex)++ & (MAX_QUEUEMESSAGES - 1);
   yuv_texture_t* message = queueMessages[i];
 
-  OSFastMutex_Unlock(&queueMutex);
+  RecursiveLock_Unlock(&queueMutex);
   return message;
 }
 
 void add_frame(yuv_texture_t* msg)
 {
-  OSFastMutex_Lock(&queueMutex);
+  RecursiveLock_Lock(&queueMutex);
 
   uint32_t elements_in = queueWriteIndex - queueReadIndex;
   if (elements_in == MAX_QUEUEMESSAGES) {
-    OSFastMutex_Unlock(&queueMutex);
+    RecursiveLock_Unlock(&queueMutex);
     return; // framequeue is full
   }
 
   uint32_t i = (queueWriteIndex)++ & (MAX_QUEUEMESSAGES - 1);
   queueMessages[i] = msg;
 
-  OSFastMutex_Unlock(&queueMutex);
+  RecursiveLock_Unlock(&queueMutex);
 }
 
-void wiiu_setup_renderstate(void)
+void ds_setup_renderstate(void)
 {
   WHBGfxBeginRenderTV();
   GX2SetColorControl(GX2_LOGIC_OP_COPY, 0xFF, FALSE, TRUE);

@@ -27,10 +27,10 @@
 yuv_texture_t textures[NUM_BUFFERS];
 uint32_t currentTexture;
 
-static void* decoder;
-static char* decodebuffer;
+static MVDSTD_Config config;
 
-static void frame_callback(H264DecodeOutput *output) { }
+static u32* decoder;
+static void* decodebuffer;
 
 /*static void createYUVTextures(GX2Texture* yPlane, GX2Texture* uvPlane, uint32_t width, uint32_t height)
 {
@@ -82,47 +82,49 @@ static int ds_decoder_setup(int videoFormat, int width, int height, int redrawRa
     return -1;
   }
 
-  decoder = memalign(H264_MEM_ALIGNMENT, H264_MEM_REQUIREMENT);
+  decoder = linearMemAlign(H264_MEM_ALIGNMENT, H264_MEM_REQUIREMENT);
   if (decoder == NULL) {
     fprintf(stderr, "Not enough memory\n");
     return -1;
   }
 
-  int res = H264DECCheckMemSegmentation(decoder, H264_MEM_REQUIREMENT);
-  if (res != 0) {
-    printf("h264_wiiu: Invalid memory segmentation 0x%07X\n", res);
-    return -1;
-  }
+  //int res = H264DECCheckMemSegmentation(decoder, H264_MEM_REQUIREMENT);
+  //if (res != 0) {
+  //  printf("h264_wiiu: Invalid memory segmentation 0x%07X\n", res);
+  //  return -1;
+  //}
   
-  res = mvdstdInit(MVDMODE_VIDEOPROCESSING, MVD_INPUT_H264, MVD_OUTPUT_BGR565, MVD_DEFAULT_WORKBUF_SIZE, NULL);
+  int res = mvdstdInit(MVDMODE_VIDEOPROCESSING, MVD_INPUT_H264, MVD_OUTPUT_BGR565, MVD_DEFAULT_WORKBUF_SIZE, NULL);
   if (res != 0) {
     printf("mvd_3ds: Error initializing decoder 0x%07X\n", res);
     return -1;
   }
 
-  res = H264DECSetParam_FPTR_OUTPUT(decoder, frame_callback);
-  if (res != 0) {
-    printf("h264_wiiu: Error setting callback 0x%07X\n", res);
-    return -1;
-  }
+  mvdstdGenerateDefaultConfig(&config, width, height, 240, 400, NULL, (u32*)decoder, (u32*)decoder);
 
-  res = H264DECSetParam_OUTPUT_PER_FRAME(decoder, 1);
-  if (res != 0) {
-    printf("h264_wiiu: Error setting OUTPUT_PER_FRAME 0x%07X\n", res);
-    return -1;
-  }
+  //res = H264DECSetParam_FPTR_OUTPUT(decoder, frame_callback);
+  //if (res != 0) {
+  //  printf("h264_wiiu: Error setting callback 0x%07X\n", res);
+  //  return -1;
+  //}
 
-  res = H264DECOpen(decoder);
-  if (res != 0) {
-    printf("h264_wiiu: Error opening decoder 0x%07X\n", res);
-    return -1;
-  }
+  //res = H264DECSetParam_OUTPUT_PER_FRAME(decoder, 1);
+  //if (res != 0) {
+  //  printf("h264_wiiu: Error setting OUTPUT_PER_FRAME 0x%07X\n", res);
+  //  return -1;
+  //}
 
-  res = H264DECBegin(decoder);
-  if (res != 0) {
-    printf("h264_wiiu: Error preparing decoder 0x%07X\n", res);
-    return -1;
-  }
+  //res = H264DECOpen(decoder);
+  //if (res != 0) {
+  //  printf("h264_wiiu: Error opening decoder 0x%07X\n", res);
+  //  return -1;
+  //}
+
+  //res = H264DECBegin(decoder);
+  //if (res != 0) {
+  //  printf("h264_wiiu: Error preparing decoder 0x%07X\n", res);
+  //  return -1;
+  //}
 
   /*for (int i = 0; i < NUM_BUFFERS; i++) {
     createYUVTextures(&textures[i].yTex, &textures[i].uvTex, width, height);
@@ -135,7 +137,7 @@ static int ds_decoder_setup(int videoFormat, int width, int height, int redrawRa
   }*/
   currentTexture = 0;
 
-  decodebuffer = memalign(H264_MEM_ALIGNMENT, DECODER_BUFFER_SIZE + 64);
+  decodebuffer = linearMemAlign(H264_MEM_ALIGNMENT, DECODER_BUFFER_SIZE + 64);
   if (decodebuffer == NULL) {
     fprintf(stderr, "Not enough memory\n");
     return -1;
@@ -145,19 +147,20 @@ static int ds_decoder_setup(int videoFormat, int width, int height, int redrawRa
 }
 
 static void ds_decoder_cleanup() {
-  H264DECFlush(decoder);
-  H264DECEnd(decoder);
-  H264DECClose(decoder);
+  //H264DECFlush(decoder);
+  //H264DECEnd(decoder);
+  //H264DECClose(decoder);
+  mvdstdExit();
 
   free(decoder);
   decoder = NULL;
   free(decodebuffer);
   decodebuffer = NULL;
 
-  for (int i = 0; i < NUM_BUFFERS; i++) {
+  /*for (int i = 0; i < NUM_BUFFERS; i++) {
     free(textures[i].yTex.surface.image);
     textures[i].yTex.surface.image = NULL;
-  }
+  }*/
 }
 
 static int ds_decoder_submit_decode_unit(PDECODE_UNIT decodeUnit) {
@@ -174,20 +177,22 @@ static int ds_decoder_submit_decode_unit(PDECODE_UNIT decodeUnit) {
     entry = entry->next;
   }
 
-  int res = H264DECSetBitstream(decoder, decodebuffer, length, 0);
+  MVDSTD_ProcessNALUnitOut tmpout;
+
+  int res = mvdstdProcessVideoFrame(decodebuffer, length, 0, &tmpout);
   if (res != 0) {
-    printf("h264_wiiu: Error setting bitstream 0x%07X\n", res);
+    printf("mvd_3ds: Error processing frame 0x%07X\n", res);
     return DR_NEED_IDR;
   }
 
-  yuv_texture_t* tex = &textures[currentTexture];
-
-  res = H264DECExecute(decoder, tex->yTex.surface.image);
-  if ((res & ~0xff) != 0) {
-    printf("h264_wiiu: Error decoding frame 0x%07X\n", res);
+  //yuv_texture_t* tex = &textures[currentTexture];
+  
+  res = mvdstdRenderVideoFrame(&config, true);
+  if (res != 0) {
+    printf("h264_wiiu: Error rendering frame 0x%07X\n", res);
     return DR_NEED_IDR;
   }
-
+  
   nextFrame++;
 
   add_frame(tex);
