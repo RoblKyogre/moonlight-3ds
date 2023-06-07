@@ -1,11 +1,12 @@
-#include "wiiu.h"
+#include "3ds.h"
 
 #include <sps.h>
 
-#include <wut.h>
-#include <h264/decode.h>
-#include <gx2/utils.h>
-#include <gx2/mem.h>
+#include <3ds.h>
+#include <3ds/types.h>
+#include <3ds/services/mvd.h>
+//#include <gx2/utils.h>
+//#include <gx2/mem.h>
 
 #include <unistd.h>
 #include <stdbool.h>
@@ -31,7 +32,7 @@ static char* decodebuffer;
 
 static void frame_callback(H264DecodeOutput *output) { }
 
-static void createYUVTextures(GX2Texture* yPlane, GX2Texture* uvPlane, uint32_t width, uint32_t height)
+/*static void createYUVTextures(GX2Texture* yPlane, GX2Texture* uvPlane, uint32_t width, uint32_t height)
 {
   memset(yPlane, 0, sizeof(GX2Texture));
   memset(uvPlane, 0, sizeof(GX2Texture));
@@ -73,9 +74,9 @@ static void createYUVTextures(GX2Texture* yPlane, GX2Texture* uvPlane, uint32_t 
   GX2Invalidate(GX2_INVALIDATE_MODE_CPU_TEXTURE, yPlane->surface.image, H264_FRAME_SIZE(H264_FRAME_PITCH(width), height));
 
   uvPlane->surface.image = yPlane->surface.image + yPlane->surface.imageSize;
-}
+}*/
 
-static int wiiu_decoder_setup(int videoFormat, int width, int height, int redrawRate, void* context, int drFlags) {
+static int ds_decoder_setup(int videoFormat, int width, int height, int redrawRate, void* context, int drFlags) {
   if (videoFormat != VIDEO_FORMAT_H264) {
     printf("Invalid video format\n");
     return -1;
@@ -92,10 +93,10 @@ static int wiiu_decoder_setup(int videoFormat, int width, int height, int redraw
     printf("h264_wiiu: Invalid memory segmentation 0x%07X\n", res);
     return -1;
   }
-
-  res = H264DECInitParam(H264_MEM_REQUIREMENT, decoder);
+  
+  res = mvdstdInit(MVDMODE_VIDEOPROCESSING, MVD_INPUT_H264, MVD_OUTPUT_BGR565, MVD_DEFAULT_WORKBUF_SIZE, NULL);
   if (res != 0) {
-    printf("h264_wiiu: Error initializing decoder 0x%07X\n", res);
+    printf("mvd_3ds: Error initializing decoder 0x%07X\n", res);
     return -1;
   }
 
@@ -123,7 +124,7 @@ static int wiiu_decoder_setup(int videoFormat, int width, int height, int redraw
     return -1;
   }
 
-  for (int i = 0; i < NUM_BUFFERS; i++) {
+  /*for (int i = 0; i < NUM_BUFFERS; i++) {
     createYUVTextures(&textures[i].yTex, &textures[i].uvTex, width, height);
 
     res = H264DECCheckMemSegmentation(textures[i].yTex.surface.image, H264_FRAME_SIZE(H264_FRAME_PITCH(width), height));
@@ -131,7 +132,7 @@ static int wiiu_decoder_setup(int videoFormat, int width, int height, int redraw
       printf("h264_wiiu: Invalid texture memory segmentation 0x%07X\n", res);
       return -1;
     }
-  }
+  }*/
   currentTexture = 0;
 
   decodebuffer = memalign(H264_MEM_ALIGNMENT, DECODER_BUFFER_SIZE + 64);
@@ -143,7 +144,7 @@ static int wiiu_decoder_setup(int videoFormat, int width, int height, int redraw
   return 0;
 }
 
-static void wiiu_decoder_cleanup() {
+static void ds_decoder_cleanup() {
   H264DECFlush(decoder);
   H264DECEnd(decoder);
   H264DECClose(decoder);
@@ -159,7 +160,7 @@ static void wiiu_decoder_cleanup() {
   }
 }
 
-static int wiiu_decoder_submit_decode_unit(PDECODE_UNIT decodeUnit) {
+static int ds_decoder_submit_decode_unit(PDECODE_UNIT decodeUnit) {
   if (decodeUnit->fullLength > DECODER_BUFFER_SIZE) {
     fprintf(stderr, "Video decode buffer too small\n");
     return DR_OK;
@@ -200,9 +201,9 @@ static int wiiu_decoder_submit_decode_unit(PDECODE_UNIT decodeUnit) {
   return DR_OK;
 }
 
-DECODER_RENDERER_CALLBACKS decoder_callbacks_wiiu = {
-  .setup = wiiu_decoder_setup,
-  .cleanup = wiiu_decoder_cleanup,
-  .submitDecodeUnit = wiiu_decoder_submit_decode_unit,
+DECODER_RENDERER_CALLBACKS decoder_callbacks_ds = {
+  .setup = ds_decoder_setup,
+  .cleanup = ds_decoder_cleanup,
+  .submitDecodeUnit = ds_decoder_submit_decode_unit,
   .capabilities = CAPABILITY_DIRECT_SUBMIT,
 };
