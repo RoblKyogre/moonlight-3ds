@@ -34,7 +34,7 @@ include $(DEVKITARM)/3ds_rules
 TARGET		:=	moonlight
 BUILD		:=	build
 SOURCES		:=	src \
-				src/wiiu \
+				src/3ds \
 				libgamestream \
 				third_party/moonlight-common-c/src \
 				third_party/moonlight-common-c/reedsolomon \
@@ -42,7 +42,7 @@ SOURCES		:=	src \
 				third_party/h264bitstream \
 				third_party/libuuid
 DATA		:=	data
-INCLUDES	:=	src/wiiu \
+INCLUDES	:=	src/3ds \
 				libgamestream \
 				third_party/moonlight-common-c/src \
 				third_party/moonlight-common-c/reedsolomon \
