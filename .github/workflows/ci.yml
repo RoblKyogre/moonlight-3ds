@@ -11,7 +11,7 @@ jobs:
         submodules: recursive
     - name: build binary
       run: |
-        docker run --rm -v ${PWD}:/project garyodernichts/moonlight3dsbuilder make dist
+        docker run --rm -v ${PWD}:/project roblkyogre/moonlight3dsbuilder make dist
     - uses: actions/upload-artifact@v2
       with:
        name: moonlight-3ds
