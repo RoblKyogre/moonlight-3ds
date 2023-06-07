@@ -23,8 +23,8 @@
 #include <stdarg.h>
 #include <signal.h>
 
-#ifdef __WIIU__
-#include "wiiu/wiiu.h"
+#ifdef __3DS__
+#include "3ds/3ds.h"
 #endif
 
 #ifdef HAVE_SDL
@@ -39,49 +39,49 @@ static void connection_terminated(int errorCode) {
   switch (errorCode) {
   case ML_ERROR_GRACEFUL_TERMINATION:
     printf("Connection has been terminated gracefully.\n");
-#ifdef __WIIU__
+#ifdef __3DS__
     sprintf(message_buffer, "Connection has been terminated gracefully.\n");
     is_error = 0;
 #endif
     break;
   case ML_ERROR_NO_VIDEO_TRAFFIC:
     printf("No video received from host. Check the host PC's firewall and port forwarding rules.\n");
-#ifdef __WIIU__
+#ifdef __3DS__
     sprintf(message_buffer, "No video received from host.\n Check the host PC's firewall and port forwarding rules.\n");
     is_error = 1;
 #endif
     break;
   case ML_ERROR_NO_VIDEO_FRAME:
     printf("Your network connection isn't performing well. Reduce your video bitrate setting or try a faster connection.\n");
-#ifdef __WIIU__
+#ifdef __3DS__
     sprintf(message_buffer, "Your network connection isn't performing well.\n Reduce your video bitrate setting or try a faster connection.\n");
     is_error = 1;
 #endif
     break;
   case ML_ERROR_UNEXPECTED_EARLY_TERMINATION:
     printf("The connection was unexpectedly terminated by the host due to a video capture error. Make sure no DRM-protected content is playing on the host.\n");
-#ifdef __WIIU__
+#ifdef __3DS__
     sprintf(message_buffer, "The connection was unexpectedly terminated by the host due to a video capture error.\n Make sure no DRM-protected content is playing on the host.\n");
     is_error = 1;
 #endif
     break;
   case ML_ERROR_PROTECTED_CONTENT:
     printf("The connection was terminated by the host due to DRM-protected content. Close any DRM-protected content on the host and try again.\n");
-#ifdef __WIIU__
+#ifdef __3DS__
     sprintf(message_buffer, "The connection was terminated by the host due to DRM-protected content.\n Close any DRM-protected content on the host and try again.\n");
     is_error = 1;
 #endif
     break;
   default:
     printf("Connection terminated with error: %d\n", errorCode);
-#ifdef __WIIU__
+#ifdef __3DS__
     sprintf(message_buffer, "Connection terminated with error: %d\n", errorCode);
     is_error = 1;
 #endif
     break;
   }
 
-#ifndef __WIIU__
+#ifndef __3DS__
   #ifdef HAVE_SDL
       SDL_Event event;
       event.type = SDL_QUIT;

@@ -1,37 +1,30 @@
-# Moonlight Wii U
+# Moonlight 3DS
 
-Moonlight Wii U is a port of Moonlight Embedded, which is an open source implementation of NVIDIA's GameStream, as used by the NVIDIA Shield.
+Moonlight 3DS is a port of Moonlight Embedded, which is an open source implementation of NVIDIA's GameStream, as used by the NVIDIA Shield.
 
-Moonlight Wii U allows you to stream your full collection of games from your powerful Windows desktop to your Wii U.
+Moonlight 3DS allows you to stream your full collection of games from your powerful Windows desktop to your 3DS.
 
 ## Requirements
 
 * [GFE compatible](http://shield.nvidia.com/play-pc-games/) computer with GTX 600/700/900/1000 series GPU (for the PC you're streaming from)
 * Geforce Experience 2.1.1 or higher
-* A Wii U LAN Adapter is recommended
 
 If your PC isn't supported or you're having performance related issues, try using [sunshine](https://github.com/loki-47-6F-64/sunshine) instead.
 
 ## Quick Start
 
-* Grab the latest version from the [releases page](https://github.com/GaryOderNichts/moonlight-wiiu/releases) and extract it to the root of your SD Card
-* Enter the IP of your GFE server in the `moonlight.conf` file located at `sd:/wiiu/apps/moonlight`
-* Ensure your GFE server and Wii U are on the same network
+* Grab the latest version from the [releases page](https://github.com/RoblKyogre/moonlight-3ds/releases) and extract it to the root of your SD Card
+* Enter the IP of your GFE server in the `moonlight.conf` file located at `sd:/3ds/moonlight`
+* Ensure your GFE server and 3DS are on the same network
 * Turn on Shield Streaming in the GFE settings
-* Pair Moonlight Wii U with the GFE server
+* Pair Moonlight 3DS with the GFE server
 * Accept the pairing confirmation on your PC
-* Connect to the GFE Server with Moonlight Wii U
+* Connect to the GFE Server with Moonlight 3DS
 * Play games!
 
 ## Configuration
 
-You can configure all of the documented settings in the `moonlight.conf` file located at `sd:/wiiu/apps/moonlight`.
-
-## Supported controllers
-
-* Gamepad (can be disabled with the `disable_gamepad` option)
-* Up to 4 Wii U Pro Controllers and Wii Classic Controllers (Pro)  
-  Gamepad needs to be disabled to use the 4th controller
+You can configure all of the documented settings in the `moonlight.conf` file located at `sd:/3ds/moonlight`.
 
 ## See also
 
@@ -46,5 +39,5 @@ You can configure all of the documented settings in the `moonlight.conf` file lo
 ## Building from source
 
 You can simply build this using the provided Dockerfile.  
-Use `docker build -t moonlightbuilder .` to build the container.  
-Then use `docker run -it --rm -v ${PWD}:/project moonlightbuilder make` to build moonlight.  
+Use `docker build -t moonlight3dsbuilder .` to build the container.  
+Then use `docker run -it --rm -v ${PWD}:/project moonlight3dsbuilder make` to build moonlight.  
