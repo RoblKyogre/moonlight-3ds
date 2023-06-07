@@ -1,7 +1,7 @@
 // procui implementation based on <https://github.com/devkitPro/wut/blob/master/libraries/libwhb/src/proc.c>
 // we need to use a custom one to handle home button input properly
 
-#include "wiiu.h"
+#include "3ds.h"
 
 #include <coreinit/foreground.h>
 #include <coreinit/title.h>

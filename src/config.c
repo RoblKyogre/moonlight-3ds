@@ -32,7 +32,7 @@
 #include <sys/types.h>
 #include <limits.h>
 
-#ifdef __WIIU__
+#ifdef __3DS__
 extern int disable_gamepad;
 extern int swap_buttons;
 extern int absolute_positioning;
@@ -40,7 +40,7 @@ extern int autostream;
 
 extern ssize_t getline(char **buf, size_t *bufsiz, FILE *fp);
 
-#define MOONLIGHT_WIIU_PATH "/vol/external01/wiiu/apps/moonlight"
+#define MOONLIGHT_3DS_PATH "/3ds/moonlight"
 #endif
 
 #define MOONLIGHT_PATH "/moonlight"
@@ -83,7 +83,7 @@ static struct option long_options[] = {
   {"rotate", required_argument, NULL, '3'},
   {"verbose", no_argument, NULL, 'z'},
   {"debug", no_argument, NULL, 'Z'},
-#ifdef __WIIU__
+#ifdef __3DS__
   {"disable_gamepad", no_argument, NULL, 'A'},
   {"swap_buttons", no_argument, NULL, 'B'},
   {"autostream", no_argument, NULL, 'C'},
@@ -95,7 +95,7 @@ static struct option long_options[] = {
   {0, 0, 0, 0},
 };
 
-#ifndef __WIIU__
+#ifndef __3DS__
 char* get_path(char* name, char* extra_data_dirs) {
   const char *xdg_config_dir = getenv("XDG_CONFIG_DIR");
   const char *home_dir = getenv("HOME");
@@ -187,7 +187,7 @@ static void parse_argument(int c, char* value, PCONFIGURATION config) {
     inputAdded = true;
     break;
   case 'k':
-#ifndef __WIIU__
+#ifndef __3DS__
     config->mapping = get_path(value, getenv("XDG_DATA_DIRS"));
     if (config->mapping == NULL) {
       fprintf(stderr, "Unable to open custom mapping file: %s\n", value);
@@ -265,7 +265,7 @@ static void parse_argument(int c, char* value, PCONFIGURATION config) {
   case 'Z':
     config->debug_level = 2;
     break;
-#ifdef __WIIU__
+#ifdef __3DS__
   case 'A':
     disable_gamepad = true;
     break;
@@ -311,7 +311,7 @@ bool config_file_parse(char* filename, PCONFIGURATION config) {
   size_t len = 0;
 
   while (getline(&line, &len, fd) != -1) {
-#ifndef __WIIU__ // Wii U doesn't like %m
+#ifndef __3DS__ // Wii U doesn't like %m
   char *key = NULL, *value = NULL;
     if (sscanf(line, "%ms = %m[^\n]", &key, &value) == 2) {
 #else
@@ -398,7 +398,7 @@ void config_parse(int argc, char* argv[], PCONFIGURATION config) {
   }
 #endif
 
-#ifdef __WIIU__
+#ifdef __3DS__
   config->stream.encryptionFlags = ENCFLG_NONE;
   config->stream.fps = 30;
 #endif
@@ -423,17 +423,17 @@ void config_parse(int argc, char* argv[], PCONFIGURATION config) {
 
   config->inputsCount = 0;
 
-#ifndef __WIIU__
+#ifndef __3DS__
   config->codec = CODEC_UNSPECIFIED;
   config->mapping = get_path("gamecontrollerdb.txt", getenv("XDG_DATA_DIRS"));
   config->key_dir[0] = 0;
 #else
   config->codec = CODEC_H264;
   config->mapping = (char*) "";
-  strcpy(config->key_dir, MOONLIGHT_WIIU_PATH "/keys");
+  strcpy(config->key_dir, MOONLIGHT_3DS_PATH "/keys");
 #endif
 
-#ifndef __WIIU__
+#ifndef __3DS__
   char* config_file = get_path("moonlight.conf", "/etc");
   if (config_file)
     config_file_parse(config_file, config);
@@ -465,7 +465,7 @@ void config_parse(int argc, char* argv[], PCONFIGURATION config) {
       sprintf(config->key_dir, "%s" DEFAULT_CACHE_DIR MOONLIGHT_PATH, pw->pw_dir);
   }
 #else
-  char* config_file = (char*) MOONLIGHT_WIIU_PATH "/moonlight.conf";
+  char* config_file = (char*) MOONLIGHT_3DS_PATH "/moonlight.conf";
   if (config_file)
     config_file_parse(config_file, config);
 #endif

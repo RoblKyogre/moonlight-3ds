@@ -17,7 +17,7 @@
  * along with Moonlight; if not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __WIIU__
+#ifndef __3DS__
 
 #include "errors.h"
 

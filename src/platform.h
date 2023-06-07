@@ -19,7 +19,7 @@
 
 #include <Limelight.h>
 
-#ifndef __WIIU__
+#ifndef __3DS__
 #include <dlfcn.h>
 #endif
 #include <stdbool.h>
@@ -28,7 +28,7 @@
 
 #define IS_EMBEDDED(SYSTEM) SYSTEM != SDL
 
-enum platform { NONE, SDL, X11, X11_VDPAU, X11_VAAPI, PI, MMAL, IMX, AML, RK, WIIU, FAKE };
+enum platform { NONE, SDL, X11, X11_VDPAU, X11_VAAPI, PI, MMAL, IMX, AML, RK, WIIU, DS, FAKE };
 
 enum platform platform_check(char*);
 PDECODER_RENDERER_CALLBACKS platform_get_video(enum platform system);

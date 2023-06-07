@@ -28,22 +28,22 @@
 #include "audio/audio.h"
 #include "video/video.h"
 
-#ifdef __WIIU__
-#include "wiiu/wiiu.h"
+#ifdef __3DS__
+#include "3ds/3ds.h"
 #endif
 
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#ifndef __WIIU__
+#ifndef __3DS__
 #include <dlfcn.h>
 #endif
 
 typedef bool(*ImxInit)();
 
 enum platform platform_check(char* name) {
-  #ifdef __WIIU__
-    return WIIU;
+  #ifdef __3DS__
+    return DS;
   #endif
 
   bool std = strcmp(name, "auto") == 0;
@@ -150,8 +150,8 @@ void platform_stop(enum platform system) {
 
 DECODER_RENDERER_CALLBACKS* platform_get_video(enum platform system) {
   switch (system) {
-#ifdef __WIIU__
-  case WIIU:
+#ifdef __3DS__
+  case DS:
     return &decoder_callbacks_wiiu;
 #endif
   #ifdef HAVE_X11
@@ -198,8 +198,8 @@ DECODER_RENDERER_CALLBACKS* platform_get_video(enum platform system) {
 
 AUDIO_RENDERER_CALLBACKS* platform_get_audio(enum platform system, char* audio_device) {
   switch (system) {
-  #ifdef __WIIU__
-  case WIIU:
+  #ifdef __3DS__
+  case DS:
     return &audio_callbacks_wiiu;
   #endif
   case FAKE:
@@ -240,6 +240,8 @@ bool platform_supports_hevc(enum platform system) {
 
 char* platform_name(enum platform system) {
   switch(system) {
+  case DS:
+    return "Nintendo 3DS";
   case WIIU:
     return "Nintendo Wii U";
   case PI:

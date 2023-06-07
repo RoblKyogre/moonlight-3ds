@@ -1,10 +1,11 @@
 /.vscode/
 /build/
-*.rpx
+*.3dsx
+*.cia
+*.smdh
 *.elf
 *.gsh
 *.zip
-latte-assembler
 
 # will be auto-copied from 'make dist'
-dist/wiiu/apps/moonlight/moonlight.conf
+dist/3ds/moonlight/moonlight.conf

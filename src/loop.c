@@ -21,7 +21,7 @@
 
 #include "connection.h"
 
-#ifndef __WIIU__
+#ifndef __3DS__
 
 #include <sys/stat.h>
 #include <sys/signalfd.h>

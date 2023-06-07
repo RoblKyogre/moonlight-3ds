@@ -1,3 +1,5 @@
+# Currently attempting this project, does not compile at this point in time
+
 # Moonlight 3DS
 
 Moonlight 3DS is a port of Moonlight Embedded, which is an open source implementation of NVIDIA's GameStream, as used by the NVIDIA Shield.

@@ -39,9 +39,10 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 
-#include "wiiu/wiiu.h"
-#include <whb/gfx.h>
-#include <vpad/input.h>
+#include "3ds/3ds.h"
+
+#include <3ds/gfx.h>
+#include <3ds/services/hid.h>
 
 #ifdef DEBUG
 void Debug_Init();
@@ -96,7 +97,7 @@ static int stream(PSERVER_DATA server, PCONFIGURATION config, enum platform syst
     return -1;
   }
 
-  int gamepads = wiiu_input_num_controllers();
+  int gamepads = ds_input_num_controllers();
   int gamepad_mask = 0;
   for (int i = 0; i < gamepads && i < 4; i++)
     gamepad_mask = (gamepad_mask << 1) + 1;
@@ -132,17 +133,17 @@ static int stream(PSERVER_DATA server, PCONFIGURATION config, enum platform syst
 }
 
 int main(int argc, char* argv[]) {
-  wiiu_proc_init();
+  ds_proc_init();
 
   WHBGfxInit();
-  wiiu_setup_renderstate();
+  ds_setup_renderstate();
 
 #ifdef DEBUG
   Debug_Init();
   printf("Moonlight Wii U started\n");
 #endif
 
-  wiiu_input_init();
+  ds_input_init();
 
   Font_Init();
 
@@ -174,10 +175,10 @@ int main(int argc, char* argv[]) {
     state = STATE_CONNECTING;
   }
 
-  wiiu_stream_init(config.stream.width, config.stream.height);
+  ds_stream_init(config.stream.width, config.stream.height);
 
   SERVER_DATA server;
-  while (wiiu_proc_running()) {
+  while (ds_proc_running()) {
     switch (state) {
       case STATE_INVALID: {
         Font_Draw_TVDRC();
@@ -203,8 +204,8 @@ int main(int argc, char* argv[]) {
 
         Font_Draw_TVDRC();
 
-        uint32_t btns = wiiu_input_buttons_triggered();
-        if (btns & VPAD_BUTTON_A) {
+        uint32_t btns = ds_input_buttons_triggered();
+        if (btns & KEY_A) {
           message_buffer[0] = '\0';
           state = STATE_CONNECTING;
         }
@@ -283,11 +284,11 @@ int main(int argc, char* argv[]) {
         Font_Print(8, 400, message_buffer);
         Font_Draw_TVDRC();
 
-        uint32_t btns = wiiu_input_buttons_triggered();
-        if (btns & VPAD_BUTTON_A) {
+        uint32_t btns = ds_input_buttons_triggered();
+        if (btns & KEY_A) {
           message_buffer[0] = '\0';
           state = STATE_START_STREAM;
-        } else if (btns & VPAD_BUTTON_B) {
+        } else if (btns & KEY_B) {
           message_buffer[0] = '\0';
           state = STATE_PAIRING;
         }
@@ -330,11 +331,11 @@ int main(int argc, char* argv[]) {
         Font_Draw_TVDRC();
 
         if (server.paired) {
-          enum platform system = WIIU;
+          enum platform system = DS;
           config.stream.supportsHevc = config.codec != CODEC_H264 && (config.codec == CODEC_HEVC || platform_supports_hevc(system));
 
           if (stream(&server, &config, system) == 0) {
-            wiiu_proc_set_home_enabled(0);
+            ds_proc_set_home_enabled(0);
             start_input_thread();
             state = STATE_STREAMING;
             break;
@@ -350,7 +351,7 @@ int main(int argc, char* argv[]) {
         break;
       }
       case STATE_STREAMING: {
-        wiiu_stream_draw();
+        ds_stream_draw();
         break;
       }
       case STATE_STOP_STREAM: {
@@ -363,9 +364,9 @@ int main(int argc, char* argv[]) {
           gs_quit_app(&server);
         }
 
-        platform_stop(WIIU);
+        platform_stop(DS);
 
-        wiiu_proc_set_home_enabled(1);
+        ds_proc_set_home_enabled(1);
         state = STATE_DISCONNECTED;
         break;
       }
@@ -374,11 +375,11 @@ int main(int argc, char* argv[]) {
 
   Font_Deinit();
 
-  wiiu_stream_fini();
+  ds_stream_fini();
 
   WHBGfxShutdown();
 
-  wiiu_proc_shutdown();
+  ds_proc_shutdown();
 
   return 0;
 }

@@ -13,7 +13,7 @@
 #include <string.h>
 #include <sys/time.h>
 
-#ifndef __WIIU__
+#ifndef __3DS__
 #include <sys/syscall.h>
 #endif
 
@@ -44,7 +44,7 @@ int random_get_fd(void)
 		if (i >= 0)
 			fcntl(fd, F_SETFD, i | FD_CLOEXEC);
 	}
-#ifndef __WIIU__
+#ifndef __3DS__
 	srand((getpid() << 16) ^ getuid() ^ tv.tv_sec ^ tv.tv_usec);
 #else
 	srand((1 << 16) ^ tv.tv_sec ^ tv.tv_usec);

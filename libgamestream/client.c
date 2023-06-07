@@ -418,7 +418,7 @@ int gs_unpair(PSERVER_DATA server) {
   return ret;
 }
 
-#ifdef __WIIU__
+#ifdef __3DS__
 // Wii U doesn't like the %2hhx formatting so this is a quick and dirty hexstring converter
 // https://stackoverflow.com/a/53579348/11511475
 static void hex2bin(const char* in, size_t len, unsigned char* out) {
@@ -492,7 +492,7 @@ int gs_pair(PSERVER_DATA server, char* pin) {
     goto cleanup;
   }
 
-#ifndef __WIIU__
+#ifndef __3DS__
   for (int count = 0; count < strlen(result); count += 2) {
     sscanf(&result[count], "%2hhx", &plaincert[count / 2]);
   }
@@ -554,7 +554,7 @@ int gs_pair(PSERVER_DATA server, char* pin) {
     goto cleanup;
   }
 
-#ifndef __WIIU__
+#ifndef __3DS__
   for (int count = 0; count < strlen(result); count += 2) {
     sscanf(&result[count], "%2hhx", &challenge_response_data_enc[count / 2]);
   }
@@ -619,7 +619,7 @@ int gs_pair(PSERVER_DATA server, char* pin) {
     goto cleanup;
   }
 
-#ifndef __WIIU__
+#ifndef __3DS__
   for (int count = 0; count < strlen(result); count += 2) {
     sscanf(&result[count], "%2hhx", &pairing_secret[count / 2]);
   }
@@ -841,7 +841,7 @@ int gs_quit_app(PSERVER_DATA server) {
 }
 
 int gs_init(PSERVER_DATA server, char *address, unsigned short httpPort, const char *keyDirectory, int log_level, bool unsupported) {
-#ifndef __WIIU__
+#ifndef __3DS__
   mkdirtree(keyDirectory);
 #else
   // the above will fail on the Wii U due to the /vol/external01

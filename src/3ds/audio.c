@@ -17,7 +17,7 @@
  * along with Moonlight; if not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "wiiu.h"
+#include "3ds.h"
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_audio.h>

@@ -1,4 +1,4 @@
-#include "wiiu.h"
+#include "3ds.h"
 
 #include <malloc.h>
 

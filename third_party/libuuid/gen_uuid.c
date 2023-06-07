@@ -277,7 +277,7 @@ static int get_clock(uint32_t *clock_high, uint32_t *clock_low,
 	int				len;
 	int				ret = 0;
 
-#ifndef __WIIU__
+#ifndef __3DS__
 	if (state_fd == -2) {
 		save_umask = umask(0);
 		state_fd = open(LIBUUID_CLOCK_FILE, O_RDWR|O_CREAT|O_CLOEXEC, 0660);
@@ -357,7 +357,7 @@ try_again:
 		last.tv_usec = last.tv_usec % 1000000;
 	}
 
-#ifndef __WIIU__
+#ifndef __3DS__
 	if (state_fd >= 0) {
 		rewind(state_f);
 		len = fprintf(state_f,

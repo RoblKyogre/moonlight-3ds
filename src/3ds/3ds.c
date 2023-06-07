@@ -1,4 +1,4 @@
-#include "wiiu.h"
+#include "3ds.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -34,7 +34,7 @@ static yuv_texture_t* queueMessages[MAX_QUEUEMESSAGES];
 static uint32_t queueWriteIndex;
 static uint32_t queueReadIndex;
 
-void wiiu_stream_init(uint32_t width, uint32_t height)
+void ds_stream_init(uint32_t width, uint32_t height)
 {
   currentFrame = nextFrame = 0;
 
