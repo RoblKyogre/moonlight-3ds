@@ -5,7 +5,7 @@
 #include <3ds.h>
 #include <3ds/types.h>
 #include <3ds/services/mvd.h>
-//#include <gx2/utils.h>
+//#include <citro3d.h>
 //#include <gx2/mem.h>
 
 #include <unistd.h>
@@ -24,7 +24,7 @@
 
 #define DECODER_BUFFER_SIZE 92*1024
 
-yuv_texture_t textures[NUM_BUFFERS];
+C3D_Tex textures[NUM_BUFFERS];
 uint32_t currentTexture;
 
 static MVDSTD_Config config;
@@ -76,7 +76,7 @@ static void* decodebuffer;
   uvPlane->surface.image = yPlane->surface.image + yPlane->surface.imageSize;
 }*/
 
-static int ds_decoder_setup(int videoFormat, int width, int height, int redrawRate, void* context, int drFlags) {
+static int n3ds_decoder_setup(int videoFormat, int width, int height, int redrawRate, void* context, int drFlags) {
   if (videoFormat != VIDEO_FORMAT_H264) {
     printf("Invalid video format\n");
     return -1;
@@ -100,7 +100,7 @@ static int ds_decoder_setup(int videoFormat, int width, int height, int redrawRa
     return -1;
   }
 
-  mvdstdGenerateDefaultConfig(&config, width, height, 240, 400, NULL, (u32*)decoder, (u32*)decoder);
+  mvdstdGenerateDefaultConfig(&config, height, width, 256, 512, NULL, (u32*)decoder, (u32*)decoder);
 
   //res = H264DECSetParam_FPTR_OUTPUT(decoder, frame_callback);
   //if (res != 0) {
@@ -146,7 +146,7 @@ static int ds_decoder_setup(int videoFormat, int width, int height, int redrawRa
   return 0;
 }
 
-static void ds_decoder_cleanup() {
+static void n3ds_decoder_cleanup() {
   //H264DECFlush(decoder);
   //H264DECEnd(decoder);
   //H264DECClose(decoder);
@@ -163,7 +163,7 @@ static void ds_decoder_cleanup() {
   }*/
 }
 
-static int ds_decoder_submit_decode_unit(PDECODE_UNIT decodeUnit) {
+static int n3ds_decoder_submit_decode_unit(PDECODE_UNIT decodeUnit) {
   if (decodeUnit->fullLength > DECODER_BUFFER_SIZE) {
     fprintf(stderr, "Video decode buffer too small\n");
     return DR_OK;
@@ -185,13 +185,15 @@ static int ds_decoder_submit_decode_unit(PDECODE_UNIT decodeUnit) {
     return DR_NEED_IDR;
   }
 
-  //yuv_texture_t* tex = &textures[currentTexture];
+  C3D_Tex* tex = &textures[currentTexture];
   
   res = mvdstdRenderVideoFrame(&config, true);
   if (res != 0) {
-    printf("h264_wiiu: Error rendering frame 0x%07X\n", res);
+    printf("mvd_3ds: Error rendering frame 0x%07X\n", res);
     return DR_NEED_IDR;
   }
+  
+  C3D_TexLoadImage(tex, decoder, GPU_TEXFACE_2D, 0);
   
   nextFrame++;
 
@@ -207,8 +209,8 @@ static int ds_decoder_submit_decode_unit(PDECODE_UNIT decodeUnit) {
 }
 
 DECODER_RENDERER_CALLBACKS decoder_callbacks_ds = {
-  .setup = ds_decoder_setup,
-  .cleanup = ds_decoder_cleanup,
-  .submitDecodeUnit = ds_decoder_submit_decode_unit,
+  .setup = n3ds_decoder_setup,
+  .cleanup = n3ds_decoder_cleanup,
+  .submitDecodeUnit = n3ds_decoder_submit_decode_unit,
   .capabilities = CAPABILITY_DIRECT_SUBMIT,
 };

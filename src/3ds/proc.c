@@ -27,13 +27,13 @@ static uint32_t procSaveCallback(void* context)
 static uint32_t procHomeButtonDenied(void* context)
 {
     if (fromHBL && homeEnabled) {
-        wiiu_proc_stop_running();
+        n3ds_proc_stop_running();
     }
 
     return 0;
 }
 
-void wiiu_proc_init(void)
+void n3ds_proc_init(void)
 {
     uint64_t titleID = OSGetTitleID();
     if (titleID == HBL_TITLE_ID ||
@@ -47,10 +47,10 @@ void wiiu_proc_init(void)
     running = 1;
     ProcUIInitEx(&procSaveCallback, NULL);
 
-    wiiu_proc_register_home_callback();
+    n3ds_proc_register_home_callback();
 }
 
-void wiiu_proc_shutdown(void)
+void n3ds_proc_shutdown(void)
 {
     running = 0;
 
@@ -61,14 +61,14 @@ void wiiu_proc_shutdown(void)
     }
 }
 
-void wiiu_proc_register_home_callback(void)
+void n3ds_proc_register_home_callback(void)
 {
     if (fromHBL) {
         ProcUIRegisterCallback(PROCUI_CALLBACK_HOME_BUTTON_DENIED, &procHomeButtonDenied, NULL, 100);
     }
 }
 
-int wiiu_proc_running(void)
+int n3ds_proc_running(void)
 {
     ProcUIStatus status;
 
@@ -87,7 +87,7 @@ int wiiu_proc_running(void)
     return running;
 }
 
-void wiiu_proc_stop_running(void)
+void n3ds_proc_stop_running(void)
 {
     if (fromHBL) {
         running = false;
@@ -97,7 +97,7 @@ void wiiu_proc_stop_running(void)
     }
 }
 
-void wiiu_proc_set_home_enabled(int enabled)
+void n3ds_proc_set_home_enabled(int enabled)
 {
     if (fromHBL) {
         homeEnabled = enabled;

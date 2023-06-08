@@ -2,16 +2,16 @@
 
 #include <malloc.h>
 
-#include <vpad/input.h>
-#include <padscore/kpad.h>
-#include <padscore/wpad.h>
-#include <coreinit/time.h>
-#include <coreinit/alarm.h>
+#include <3ds/services/hid.h>
+#include <3ds/services/irrst.h>
+
+#include <time.h>
+//#include <alarm.h>
 
 #define millis() OSTicksToMilliseconds(OSGetTime())
 
-int disable_gamepad = 0;
 int swap_buttons = 0;
+int swap_shoulders = 0;
 int absolute_positioning = 0;
 
 static char lastTouched = 0;
@@ -24,8 +24,8 @@ static uint16_t last_y = 0;
 #define DRAG_DISTANCE 10
 static uint64_t touchDownMillis = 0;
 
-#define TOUCH_WIDTH 1280
-#define TOUCH_HEIGHT 720
+#define TOUCH_WIDTH 320
+#define TOUCH_HEIGHT 240
 
 static int thread_running;
 static OSThread inputThread;
@@ -34,10 +34,10 @@ static OSAlarm inputAlarm;
 // ~60 Hz
 #define INPUT_UPDATE_RATE OSMillisecondsToTicks(16)
 
-void handleTouch(VPADTouchData touch) {
+void handleTouch(u32 kHeld, touchPosition touch) {
   if (absolute_positioning) {
-    if (touch.touched) {
-      LiSendMousePositionEvent(touch.x, touch.y, TOUCH_WIDTH, TOUCH_HEIGHT);
+    if (kHeld & KEY_TOUCH) {
+      LiSendMousePositionEvent(touch.px, touch.py, TOUCH_WIDTH, TOUCH_HEIGHT);
 
       if (!touched) {
         LiSendMouseButtonEvent(BUTTON_ACTION_PRESS, BUTTON_LEFT);
@@ -51,10 +51,10 @@ void handleTouch(VPADTouchData touch) {
   }
   else {
     // Just pressed (run this twice to allow touch position to settle)
-    if (lastTouched < 2 && touch.touched) {
+    if (lastTouched < 2 && kHeld & KEY_TOUCH) {
       touchDownMillis = millis();
-      last_x = touch.x;
-      last_y = touch.y;
+      last_x = touch.px;
+      last_y = touch.py;
 
       lastTouched++;
       return; // We can't do much until we wait for a few hundred milliseconds
@@ -62,102 +62,104 @@ void handleTouch(VPADTouchData touch) {
     }
 
     // Just released
-    if (lastTouched && !touch.touched) {
+    if (lastTouched && !(kHeld & KEY_TOUCH)) {
       if (millis() - touchDownMillis < TAP_MILLIS) {
         LiSendMouseButtonEvent(BUTTON_ACTION_PRESS, BUTTON_LEFT);
         LiSendMouseButtonEvent(BUTTON_ACTION_RELEASE, BUTTON_LEFT);
       }
     }
 
-    if (touch.touched) {
+    if (kHeld & KEY_TOUCH) {
       // Holding & dragging screen, not just tapping
       if (millis() - touchDownMillis > TAP_MILLIS || touchDownMillis == 0) {
-        if (touch.x != last_x || touch.y != last_y) // Don't send extra data if we don't need to
-          LiSendMouseMoveEvent(touch.x - last_x, touch.y - last_y);
-        last_x = touch.x;
-        last_y = touch.y;
+        if (touch.px != last_x || touch.py != last_y) // Don't send extra data if we don't need to
+          LiSendMouseMoveEvent(touch.px - last_x, touch.py - last_y);
+        last_x = touch.px;
+        last_y = touch.py;
       } else {
-        if (touch.x - last_x < -10 || touch.x - last_x > 10) touchDownMillis=0;
-        if (touch.y - last_y < -10 || touch.y - last_y > 10) touchDownMillis=0;
-        int16_t diff_x = touch.x - last_x;
-        int16_t diff_y = touch.y - last_y;
+        if (touch.px - last_x < -10 || touch.px - last_x > 10) touchDownMillis=0;
+        if (touch.py - last_y < -10 || touch.py - last_y > 10) touchDownMillis=0;
+        int16_t diff_x = touch.px - last_x;
+        int16_t diff_y = touch.py - last_y;
         if (diff_x < 0) diff_x = -diff_x;
         if (diff_y < 0) diff_y = -diff_y;
         if (diff_x + diff_y > DRAG_DISTANCE) touchDownMillis = 0;
       }
     }
 
-    lastTouched = touch.touched ? lastTouched : 0; // Keep value unless released
+    lastTouched = (kHeld & KEY_TOUCH) ? lastTouched : 0; // Keep value unless released
   }
 }
 
-void wiiu_input_init(void)
+void n3ds_input_init(void)
 {
-	KPADInit();
-	WPADEnableURCC(1);
+	hidInit();
+  irrstInit();
 }
 
-void wiiu_input_update(void) {
-  static uint64_t home_pressed[4] = {0};
+void n3ds_input_update(void) {
+  static uint64_t start_pressed = 0;
 
   short controllerNumber = 0;
   short gamepad_mask = 0;
 
-  for (int i = 0; i < wiiu_input_num_controllers(); i++)
+  for (int i = 0; i < n3ds_input_num_controllers(); i++)
     gamepad_mask |= 1 << i;
 
-  VPADStatus vpad;
-  VPADReadError err;
-  VPADRead(VPAD_CHAN_0, &vpad, 1, &err);
-  if (err == VPAD_READ_SUCCESS && !disable_gamepad) {
-    uint32_t btns = vpad.hold;
-    short buttonFlags = 0;
+  u32 btns = hidKeysHeld();
+  circlePosition cPad, cStick;
+  hidCircleRead(&cPad);
+	hidCstickRead(&cStick);
+  short buttonFlags = 0;
 #define CHECKBTN(v, f) if (btns & v) buttonFlags |= f;
-    if (swap_buttons) {
-      CHECKBTN(VPAD_BUTTON_A,       B_FLAG);
-      CHECKBTN(VPAD_BUTTON_B,       A_FLAG);
-      CHECKBTN(VPAD_BUTTON_X,       Y_FLAG);
-      CHECKBTN(VPAD_BUTTON_Y,       X_FLAG);
-    }
-    else {
-      CHECKBTN(VPAD_BUTTON_A,       A_FLAG);
-      CHECKBTN(VPAD_BUTTON_B,       B_FLAG);
-      CHECKBTN(VPAD_BUTTON_X,       X_FLAG);
-      CHECKBTN(VPAD_BUTTON_Y,       Y_FLAG);
-    }
-    CHECKBTN(VPAD_BUTTON_UP,      UP_FLAG);
-    CHECKBTN(VPAD_BUTTON_DOWN,    DOWN_FLAG);
-    CHECKBTN(VPAD_BUTTON_LEFT,    LEFT_FLAG);
-    CHECKBTN(VPAD_BUTTON_RIGHT,   RIGHT_FLAG);
-    CHECKBTN(VPAD_BUTTON_L,       LB_FLAG);
-    CHECKBTN(VPAD_BUTTON_R,       RB_FLAG);
-    CHECKBTN(VPAD_BUTTON_STICK_L, LS_CLK_FLAG);
-    CHECKBTN(VPAD_BUTTON_STICK_R, RS_CLK_FLAG);
-    CHECKBTN(VPAD_BUTTON_PLUS,    PLAY_FLAG);
-    CHECKBTN(VPAD_BUTTON_MINUS,   BACK_FLAG);
-    CHECKBTN(VPAD_BUTTON_HOME,    SPECIAL_FLAG);
+  if (swap_buttons) {
+    CHECKBTN(KEY_A,       B_FLAG);
+    CHECKBTN(KEY_B,       A_FLAG);
+    CHECKBTN(KEY_X,       Y_FLAG);
+    CHECKBTN(KEY_Y,       X_FLAG);
+  }
+  else {
+    CHECKBTN(KEY_A,       A_FLAG);
+    CHECKBTN(KEY_B,       B_FLAG);
+    CHECKBTN(KEY_X,       X_FLAG);
+    CHECKBTN(KEY_Y,       Y_FLAG);
+  }
+    CHECKBTN(KEY_DUP,      UP_FLAG);
+    CHECKBTN(KEY_DDOWN,    DOWN_FLAG);
+    CHECKBTN(KEY_DLEFT,    LEFT_FLAG);
+    CHECKBTN(KEY_DRIGHT,   RIGHT_FLAG);
+  if (swap_shoulders) {
+    CHECKBTN(KEY_ZL,       LB_FLAG);
+    CHECKBTN(KEY_ZR,       RB_FLAG);
+  } else {
+    CHECKBTN(KEY_L,       LB_FLAG);
+    CHECKBTN(KEY_R,       RB_FLAG);
+  }
+    CHECKBTN(KEY_START,    PLAY_FLAG);
+    CHECKBTN(KEY_SELECT,   BACK_FLAG);
 #undef CHECKBTN
 
-    // If the button was just pressed, reset to current time
-    if (vpad.trigger & VPAD_BUTTON_HOME) home_pressed[controllerNumber] = millis();
+  // If the button was just pressed, reset to current time
+  if (hidKeysDown() & KEY_START) start_pressed = millis();
 
-    if (btns & VPAD_BUTTON_HOME && millis() - home_pressed[controllerNumber] > 3000) {
-      state = STATE_STOP_STREAM;
-      return;
-    }
-
-    LiSendMultiControllerEvent(controllerNumber++, gamepad_mask, buttonFlags,
-      (vpad.hold & VPAD_BUTTON_ZL) ? 0xFF : 0,
-      (vpad.hold & VPAD_BUTTON_ZR) ? 0xFF : 0,
-      vpad.leftStick.x * INT16_MAX, vpad.leftStick.y * INT16_MAX,
-      vpad.rightStick.x * INT16_MAX, vpad.rightStick.y * INT16_MAX);
-
-    VPADTouchData touch;
-    VPADGetTPCalibratedPoint(VPAD_CHAN_0, &touch, &vpad.tpNormal);
-    handleTouch(touch);
+  if (btns & KEY_START  && millis() - start_pressed > 3000) {
+    state = STATE_STOP_STREAM;
+    return;
   }
+  
+#define CHECKSWAP(noswap, swap) ((swap_shoulders) ? (swap) : (noswap))
+  LiSendMultiControllerEvent(controllerNumber++, gamepad_mask, buttonFlags,
+    (btns & CHECKSWAP(KEY_ZL, KEY_L)) ? 0xFF : 0,
+    (btns & CHECKSWAP(KEY_ZR, KEY_R)) ? 0xFF : 0,
+    cPad.dx * INT16_MAX, cPad.dy * INT16_MAX,
+    cStick.dx * INT16_MAX, cStick.dy * INT16_MAX);
+#undef CHECKSHOULDER
 
-  KPADStatus kpad_data = {0};
+  touchPosition touch;
+  hidTouchRead(&touch);
+  handleTouch(btns, touch);
+
+  /*KPADStatus kpad_data = {0};
 	int32_t kpad_err = -1;
 	for (int i = 0; i < 4; i++) {
 		KPADReadEx((KPADChan) i, &kpad_data, 1, &kpad_err);
@@ -252,97 +254,22 @@ void wiiu_input_update(void) {
           kpad_data.classic.rightStick.x * INT16_MAX, kpad_data.classic.rightStick.y * INT16_MAX);
       }
     }
-  }
+  }*/
 }
 
-uint32_t wiiu_input_num_controllers(void)
+uint32_t n3ds_input_num_controllers(void)
 {
-  uint32_t numControllers = !disable_gamepad;
-
-  WPADExtensionType type;
-  for (int i = 0; i < 4; i++) {
-    if (WPADProbe((WPADChan) i, &type) == 0) {
-      if (type == WPAD_EXT_PRO_CONTROLLER || type == WPAD_EXT_CLASSIC || type == WPAD_EXT_MPLUS_CLASSIC) {
-        numControllers++;
-      }
-    }
-  }
-
-  if (numControllers > 4) {
-    numControllers = 4;
-  }
-
-  return numControllers;
+  return 1;
 }
 
-uint32_t wiiu_input_buttons_triggered(void)
+uint32_t n3ds_input_buttons_triggered(void)
 {
-  uint32_t btns = 0;
-
-  VPADStatus vpad;
-  VPADReadError vpad_err;
-  VPADRead(VPAD_CHAN_0, &vpad, 1, &vpad_err);
-  if (vpad_err == VPAD_READ_SUCCESS) {
-    btns |= vpad.trigger;
-  }
-
-  KPADStatus kpad_data = {0};
-	int32_t kpad_err = -1;
-	for (int i = 0; i < 4; i++) {
-		KPADReadEx((KPADChan) i, &kpad_data, 1, &kpad_err);
-		if (kpad_err == KPAD_ERROR_OK) {
-      if (kpad_data.extensionType == WPAD_EXT_PRO_CONTROLLER) {
-#define MAPBTNS(b, v) if (kpad_data.pro.trigger & b) btns |= v;
-        MAPBTNS(WPAD_PRO_BUTTON_UP,       VPAD_BUTTON_UP);
-        MAPBTNS(WPAD_PRO_BUTTON_LEFT,     VPAD_BUTTON_LEFT);
-        MAPBTNS(WPAD_PRO_TRIGGER_ZR,      VPAD_BUTTON_ZR);
-        MAPBTNS(WPAD_PRO_BUTTON_X,        VPAD_BUTTON_X);
-        MAPBTNS(WPAD_PRO_BUTTON_A,        VPAD_BUTTON_A);
-        MAPBTNS(WPAD_PRO_BUTTON_Y,        VPAD_BUTTON_Y);
-        MAPBTNS(WPAD_PRO_BUTTON_B,        VPAD_BUTTON_B);
-        MAPBTNS(WPAD_PRO_TRIGGER_ZL,      VPAD_BUTTON_ZL);
-        MAPBTNS(WPAD_PRO_TRIGGER_R,       VPAD_BUTTON_R);
-        MAPBTNS(WPAD_PRO_BUTTON_PLUS,     VPAD_BUTTON_PLUS);
-        MAPBTNS(WPAD_PRO_BUTTON_HOME,     VPAD_BUTTON_HOME);
-        MAPBTNS(WPAD_PRO_BUTTON_MINUS,    VPAD_BUTTON_MINUS);
-        MAPBTNS(WPAD_PRO_TRIGGER_L,       VPAD_BUTTON_L);
-        MAPBTNS(WPAD_PRO_BUTTON_DOWN,     VPAD_BUTTON_DOWN);
-        MAPBTNS(WPAD_PRO_BUTTON_RIGHT,    VPAD_BUTTON_RIGHT);
-        MAPBTNS(WPAD_PRO_BUTTON_STICK_R,  VPAD_BUTTON_STICK_R);
-        MAPBTNS(WPAD_PRO_BUTTON_STICK_L,  VPAD_BUTTON_STICK_L);
-#undef MAPBTNS
-      }
-      else if (kpad_data.extensionType == WPAD_EXT_CLASSIC || kpad_data.extensionType == WPAD_EXT_MPLUS_CLASSIC) {
-#define MAPBTNS(b, v) if (kpad_data.classic.trigger & b) btns |= v;
-        MAPBTNS(WPAD_CLASSIC_BUTTON_UP,     VPAD_BUTTON_UP);
-        MAPBTNS(WPAD_CLASSIC_BUTTON_LEFT,   VPAD_BUTTON_LEFT);
-        MAPBTNS(WPAD_CLASSIC_BUTTON_ZR,     VPAD_BUTTON_ZR);
-        MAPBTNS(WPAD_CLASSIC_BUTTON_X,      VPAD_BUTTON_X);
-        MAPBTNS(WPAD_CLASSIC_BUTTON_A,      VPAD_BUTTON_A);
-        MAPBTNS(WPAD_CLASSIC_BUTTON_Y,      VPAD_BUTTON_Y);
-        MAPBTNS(WPAD_CLASSIC_BUTTON_B,      VPAD_BUTTON_B);
-        MAPBTNS(WPAD_CLASSIC_BUTTON_ZL,     VPAD_BUTTON_ZL);
-        MAPBTNS(WPAD_CLASSIC_BUTTON_R,      VPAD_BUTTON_R);
-        MAPBTNS(WPAD_CLASSIC_BUTTON_PLUS,   VPAD_BUTTON_PLUS);
-        MAPBTNS(WPAD_CLASSIC_BUTTON_HOME,   VPAD_BUTTON_HOME);
-        MAPBTNS(WPAD_CLASSIC_BUTTON_MINUS,  VPAD_BUTTON_MINUS);
-        MAPBTNS(WPAD_CLASSIC_BUTTON_L,      VPAD_BUTTON_L);
-        MAPBTNS(WPAD_CLASSIC_BUTTON_DOWN,   VPAD_BUTTON_DOWN);
-        MAPBTNS(WPAD_CLASSIC_BUTTON_RIGHT,  VPAD_BUTTON_RIGHT);
-#undef MAPBTNS
-      }
-      else {
-        // meh we can't really map a wiimote to gamepad
-      }
-    }
-  }
-
-  return btns;
+  return hidKeysDown();
 }
 
 static void alarm_callback(OSAlarm* alarm, OSContext* ctx)
 {
-  wiiu_input_update();
+  n3ds_input_update();
 }
 
 static int input_thread_proc()

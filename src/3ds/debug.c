@@ -8,13 +8,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-static ssize_t wiiu_log_write(struct _reent* r, void* fd, const char* ptr, size_t len) {
+static ssize_t n3ds_log_write(struct _reent* r, void* fd, const char* ptr, size_t len) {
   WHBLogWritef("%*.*s", len, len, ptr);
   return len;
 }
 static const devoptab_t dotab_stdout = {
   .name = "stdout_whb",
-  .write_r = wiiu_log_write,
+  .write_r = n3ds_log_write,
 };
 
 void __wrap_abort() {

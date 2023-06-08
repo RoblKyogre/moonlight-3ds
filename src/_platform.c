@@ -43,7 +43,7 @@ typedef bool(*ImxInit)();
 
 enum platform platform_check(char* name) {
   #ifdef __3DS__
-    return DS;
+    return N3DS;
   #endif
 
   bool std = strcmp(name, "auto") == 0;
@@ -151,7 +151,7 @@ void platform_stop(enum platform system) {
 DECODER_RENDERER_CALLBACKS* platform_get_video(enum platform system) {
   switch (system) {
 #ifdef __3DS__
-  case DS:
+  case N3DS:
     return &decoder_callbacks_wiiu;
 #endif
   #ifdef HAVE_X11
@@ -199,7 +199,7 @@ DECODER_RENDERER_CALLBACKS* platform_get_video(enum platform system) {
 AUDIO_RENDERER_CALLBACKS* platform_get_audio(enum platform system, char* audio_device) {
   switch (system) {
   #ifdef __3DS__
-  case DS:
+  case N3DS:
     return &audio_callbacks_wiiu;
   #endif
   case FAKE:
@@ -240,7 +240,7 @@ bool platform_supports_hevc(enum platform system) {
 
 char* platform_name(enum platform system) {
   switch(system) {
-  case DS:
+  case N3DS:
     return "Nintendo 3DS";
   case WIIU:
     return "Nintendo Wii U";

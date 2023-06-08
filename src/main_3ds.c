@@ -97,7 +97,7 @@ static int stream(PSERVER_DATA server, PCONFIGURATION config, enum platform syst
     return -1;
   }
 
-  int gamepads = ds_input_num_controllers();
+  int gamepads = n3ds_input_num_controllers();
   int gamepad_mask = 0;
   for (int i = 0; i < gamepads && i < 4; i++)
     gamepad_mask = (gamepad_mask << 1) + 1;
@@ -133,17 +133,17 @@ static int stream(PSERVER_DATA server, PCONFIGURATION config, enum platform syst
 }
 
 int main(int argc, char* argv[]) {
-  ds_proc_init();
+  n3ds_proc_init();
 
   WHBGfxInit();
-  ds_setup_renderstate();
+  n3ds_setup_renderstate();
 
 #ifdef DEBUG
   Debug_Init();
   printf("Moonlight Wii U started\n");
 #endif
 
-  ds_input_init();
+  n3ds_input_init();
 
   Font_Init();
 
@@ -175,7 +175,7 @@ int main(int argc, char* argv[]) {
     state = STATE_CONNECTING;
   }
 
-  ds_stream_init(config.stream.width, config.stream.height);
+  n3ds_stream_init(config.stream.width, config.stream.height);
 
   SERVER_DATA server;
   while (ds_proc_running()) {
@@ -189,7 +189,7 @@ int main(int argc, char* argv[]) {
         Font_SetSize(50);
         Font_SetColor(255, 255, 255, 255);
 
-        Font_Printf(8, 58, "Moonlight Wii U %s (Disconnected)\n"
+        Font_Printf(8, 58, "Moonlight 3DS %s (Disconnected)\n"
                            SCREEN_BAR
                            "Press \ue000 to connect to %s", VERSION_STRING, config.address);
 
@@ -204,7 +204,7 @@ int main(int argc, char* argv[]) {
 
         Font_Draw_TVDRC();
 
-        uint32_t btns = ds_input_buttons_triggered();
+        uint32_t btns = n3ds_input_buttons_triggered();
         if (btns & KEY_A) {
           message_buffer[0] = '\0';
           state = STATE_CONNECTING;
@@ -270,7 +270,7 @@ int main(int argc, char* argv[]) {
         Font_SetSize(50);
         Font_SetColor(255, 255, 255, 255);
 
-        Font_Printf(8, 58, "Moonlight Wii U %s (Connected to %s)\n"
+        Font_Printf(8, 58, "Moonlight 3DS %s (Connected to %s)\n"
                            SCREEN_BAR
                            "Press \ue000 to stream\nPress \ue001 to pair\n", VERSION_STRING, config.address);
 
@@ -284,7 +284,7 @@ int main(int argc, char* argv[]) {
         Font_Print(8, 400, message_buffer);
         Font_Draw_TVDRC();
 
-        uint32_t btns = ds_input_buttons_triggered();
+        uint32_t btns = n3ds_input_buttons_triggered();
         if (btns & KEY_A) {
           message_buffer[0] = '\0';
           state = STATE_START_STREAM;
@@ -331,11 +331,11 @@ int main(int argc, char* argv[]) {
         Font_Draw_TVDRC();
 
         if (server.paired) {
-          enum platform system = DS;
+          enum platform system = N3DS;
           config.stream.supportsHevc = config.codec != CODEC_H264 && (config.codec == CODEC_HEVC || platform_supports_hevc(system));
 
           if (stream(&server, &config, system) == 0) {
-            ds_proc_set_home_enabled(0);
+            n3ds_proc_set_home_enabled(0);
             start_input_thread();
             state = STATE_STREAMING;
             break;
@@ -351,7 +351,7 @@ int main(int argc, char* argv[]) {
         break;
       }
       case STATE_STREAMING: {
-        ds_stream_draw();
+        n3ds_stream_draw();
         break;
       }
       case STATE_STOP_STREAM: {
@@ -364,9 +364,9 @@ int main(int argc, char* argv[]) {
           gs_quit_app(&server);
         }
 
-        platform_stop(DS);
+        platform_stop(N3DS);
 
-        ds_proc_set_home_enabled(1);
+        n3ds_proc_set_home_enabled(1);
         state = STATE_DISCONNECTED;
         break;
       }
@@ -375,11 +375,11 @@ int main(int argc, char* argv[]) {
 
   Font_Deinit();
 
-  ds_stream_fini();
+  n3ds_stream_fini();
 
   WHBGfxShutdown();
 
-  ds_proc_shutdown();
+  n3ds_proc_shutdown();
 
   return 0;
 }
