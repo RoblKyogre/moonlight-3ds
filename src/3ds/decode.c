@@ -208,7 +208,7 @@ static int n3ds_decoder_submit_decode_unit(PDECODE_UNIT decodeUnit) {
   return DR_OK;
 }
 
-DECODER_RENDERER_CALLBACKS decoder_callbacks_ds = {
+DECODER_RENDERER_CALLBACKS decoder_callbacks_n3ds = {
   .setup = n3ds_decoder_setup,
   .cleanup = n3ds_decoder_cleanup,
   .submitDecodeUnit = n3ds_decoder_submit_decode_unit,

@@ -74,7 +74,7 @@ LIBS	:= -lfreetype -lpng -lbz2 -lcurl -lssl -lcrypto -lSDL2 -lopus -lexpat -lz -
 # list of directories containing libraries, this must be the top level
 # containing include and lib
 #-------------------------------------------------------------------------------
-LIBDIRS	:= $(CTRULIB)
+LIBDIRS	:= $(CTRULIB) $(DEVKITPRO)/portlibs/3ds
 
 
 #-------------------------------------------------------------------------------

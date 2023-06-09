@@ -297,7 +297,6 @@ void start_input_thread(void)
 {
   thread_running = 1;
   int stack_size = 4 * 1024 * 1024;
-  void* stack_addr = (uint8_t *)memalign(8, stack_size) + stack_size;
 
   inputThread = threadCreate(input_thread_proc,
                   NULL, stack_size, 0x25, // Note: adjust 0x25 (between 0x18 and 0x3F) if input and/or video is broken

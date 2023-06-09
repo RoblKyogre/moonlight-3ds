@@ -178,7 +178,7 @@ int main(int argc, char* argv[]) {
   n3ds_stream_init(config.stream.width, config.stream.height);
 
   SERVER_DATA server;
-  while (ds_proc_running()) {
+  while (n3ds_proc_running()) {
     switch (state) {
       case STATE_INVALID: {
         Font_Draw_TVDRC();

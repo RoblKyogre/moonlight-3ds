@@ -46,7 +46,7 @@ static float drcScreenSize[2];
 uint32_t currentFrame;
 uint32_t nextFrame;
 
-static RecursiveLock queueMutex;
+static LightLock queueMutex;
 static C3D_Tex* queueMessages[MAX_QUEUEMESSAGES];
 static uint32_t queueWriteIndex;
 static uint32_t queueReadIndex;
@@ -60,7 +60,7 @@ void n3ds_stream_init(uint32_t width, uint32_t height)
 {
   currentFrame = nextFrame = 0;
 
-  RecursiveLock_Init(&queueMutex);
+  LightLock_Init(&queueMutex);
   queueReadIndex = queueWriteIndex = 0;
   
   gfxInitDefault();
@@ -159,35 +159,35 @@ void n3ds_stream_fini(void)
 
 void* get_frame(void)
 {
-  RecursiveLock_Lock(&queueMutex);
+  LightLock_Lock(&queueMutex);
 
   uint32_t elements_in = queueWriteIndex - queueReadIndex;
   if(elements_in == 0) {
-    RecursiveLock_Unlock(&queueMutex);
+    LightLock_Unlock(&queueMutex);
     return NULL; // framequeue is empty
   }
 
   uint32_t i = (queueReadIndex)++ & (MAX_QUEUEMESSAGES - 1);
   C3D_Tex* message = queueMessages[i];
 
-  RecursiveLock_Unlock(&queueMutex);
+  LightLock_Unlock(&queueMutex);
   return message;
 }
 
 void add_frame(C3D_Tex* msg)
 {
-  RecursiveLock_Lock(&queueMutex);
+  LightLock_Lock(&queueMutex);
 
   uint32_t elements_in = queueWriteIndex - queueReadIndex;
   if (elements_in == MAX_QUEUEMESSAGES) {
-    RecursiveLock_Unlock(&queueMutex);
+    LightLock_Unlock(&queueMutex);
     return; // framequeue is full
   }
 
   uint32_t i = (queueWriteIndex)++ & (MAX_QUEUEMESSAGES - 1);
   queueMessages[i] = msg;
 
-  RecursiveLock_Unlock(&queueMutex);
+  LightLock_Unlock(&queueMutex);
 }
 
 void n3ds_setup_renderstate(void)

@@ -36,7 +36,7 @@ index edee7db..61db4a4 100644\n\
 -#define AF_INET6        PF_INET6\n\
 +//#define AF_INET6        PF_INET6\n\
  \n #define SOCK_STREAM     1\n #define SOCK_DGRAM      2\n\
-' >> servent.patch && cat servent.patch && git apply servent.patch
+' >> servent.patch && git apply servent.patch
 
 WORKDIR /libctru/libctru
 RUN make -j$(nproc)
@@ -46,7 +46,7 @@ WORKDIR /
 # set up builder image
 FROM devkitpro/devkitarm:20230526 AS builder
 
-RUN apt-get update && apt-get -y install --no-install-recommends wget tar autoconf automake libtool && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get -y install --no-install-recommends tar autoconf automake libtool && rm -rf /var/lib/apt/lists/*
 COPY --from=ctrubuild /opt/devkitpro/libctru /opt/devkitpro/libctru
 
 # build SDL2
@@ -58,6 +58,9 @@ WORKDIR /SDL
 RUN mkdir build
 WORKDIR /SDL/build
 
+ENV ARCH "-march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft"
+ENV CFLAGS "-O3 -mword-relocations -ffunction-sections -fdata-sections ${ARCH}"
+ENV CXXFLAGS "${CFLAGS} -fno-rtti -fno-exceptions -std=c++11"
 RUN cmake .. -DCMAKE_TOOLCHAIN_FILE="$DEVKITPRO/cmake/3DS.cmake" -DCMAKE_INSTALL_PREFIX=$DEVKITPRO/portlibs/3ds -DCMAKE_BUILD_TYPE=Release
 RUN make -j$(nproc) && make install
 WORKDIR /
@@ -66,7 +69,7 @@ WORKDIR /
 FROM builder AS opensslbuild
 ARG openssl_ver=1.1.1u
 
-RUN wget https://www.openssl.org/source/openssl-$openssl_ver.tar.gz && mkdir /openssl && tar xf openssl-$openssl_ver.tar.gz -C /openssl --strip-components=1
+RUN curl -LO https://www.openssl.org/source/openssl-$openssl_ver.tar.gz && mkdir /openssl && tar xf openssl-$openssl_ver.tar.gz -C /openssl --strip-components=1
 WORKDIR /openssl
 
 RUN echo 'diff --git a/Configurations/10-main.conf b/Configurations/10-main.conf\n\
@@ -90,7 +93,7 @@ index 61c6689..efe686a 100644\n\
 +                                   debug   => "-O0 -g",\n\
 +                                   release => "-O3"),\n\
 +        LDFLAGS          => "-L$ENV{DEVKITPRO}/libctru/lib",\n\
-+        cflags           => add("-march=armv6k -mtp=soft -mtune=mpcore -mhard-float -mword-relocations -ffunction-sections -fdata-sections"),\n\
++        cflags           => add("-mword-relocations -ffunction-sections -fdata-sections -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft "),\n\
 +        cxxflags         => add("-fno-rtti -fno-exceptions -std=c++11"),\n\
 +        lib_cppflags     => "-DSO_KEEPALIVE=0x0008 -DOPENSSL_USE_NODELETE -DB_ENDIAN -DNO_SYS_UN_H -DNO_SYSLOG -D__3DS__ -I$ENV{DEVKITPRO}/libctru/include",\n\
 +        ex_libs          => add("-lctru -lm"),\n\
@@ -153,7 +156,7 @@ index a9eae36..4a81d98 100644\n\
  \n\
  int OPENSSL_issetugid(void)\n\
  {\n\
-' >> 3ds.patch && cat 3ds.patch && git apply 3ds.patch
+' >> 3ds.patch && git apply 3ds.patch
 
 RUN ./Configure 3ds \
   no-threads no-shared no-asm no-ui-console no-unit-test no-tests no-buildtest-c++ no-external-tests no-autoload-config \
@@ -168,10 +171,11 @@ FROM builder as expatbuild
 ARG expat_tag=2_5_0
 ARG expat_ver=2.5.0
 
-RUN wget https://github.com/libexpat/libexpat/releases/download/R_$expat_tag/expat-$expat_ver.tar.gz && mkdir /expat && tar xf expat-$expat_ver.tar.gz -C /expat --strip-components=1
+RUN curl -LO https://github.com/libexpat/libexpat/releases/download/R_$expat_tag/expat-$expat_ver.tar.gz && mkdir /expat && tar xf expat-$expat_ver.tar.gz -C /expat --strip-components=1
 WORKDIR /expat
 
-ENV CFLAGS "-march=armv6k -mtp=soft -mtune=mpcore -mhard-float -O3 -mword-relocations -ffunction-sections -fdata-sections"
+ENV ARCH "-march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft"
+ENV CFLAGS "-O3 -mword-relocations -ffunction-sections -fdata-sections ${ARCH}"
 ENV CXXFLAGS "${CFLAGS} -fno-rtti -fno-exceptions -std=c++11"
 ENV CPPFLAGS "-D__3DS__ -I${DEVKITPRO}/libctru/include"
 ENV LDFLAGS "-L${DEVKITPRO}/libctru/lib"
@@ -194,8 +198,6 @@ RUN make -j$(nproc) && make install
 WORKDIR /
 
 # build final container
-# libopus, curl, openssl?, expat
-# opus and curl are already provided, expat and openssl need to be built
 FROM devkitpro/devkitarm:20230526 AS final
 
 # copy in libctru
