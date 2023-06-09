@@ -29,7 +29,7 @@ uint32_t currentTexture;
 
 static MVDSTD_Config config;
 
-static u32* decoder;
+static uint32_t* decoder;
 static void* decodebuffer;
 
 /*static void createYUVTextures(GX2Texture* yPlane, GX2Texture* uvPlane, uint32_t width, uint32_t height)
@@ -100,7 +100,7 @@ static int n3ds_decoder_setup(int videoFormat, int width, int height, int redraw
     return -1;
   }
 
-  mvdstdGenerateDefaultConfig(&config, height, width, 256, 512, NULL, (u32*)decoder, (u32*)decoder);
+  mvdstdGenerateDefaultConfig(&config, height, width, 256, 512, NULL, (uint32_t*)decoder, (uint32_t*)decoder);
 
   //res = H264DECSetParam_FPTR_OUTPUT(decoder, frame_callback);
   //if (res != 0) {

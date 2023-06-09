@@ -6,9 +6,10 @@
 #include <3ds/services/irrst.h>
 
 #include <time.h>
-//#include <alarm.h>
+#include <3ds/thread.h>
+#include <3ds/os.h>
 
-#define millis() OSTicksToMilliseconds(OSGetTime())
+#define millis() osGetTime()
 
 int swap_buttons = 0;
 int swap_shoulders = 0;
@@ -28,13 +29,13 @@ static uint64_t touchDownMillis = 0;
 #define TOUCH_HEIGHT 240
 
 static int thread_running;
-static OSThread inputThread;
-static OSAlarm inputAlarm;
+static Thread inputThread;
+//static OSAlarm inputAlarm;
 
-// ~60 Hz
-#define INPUT_UPDATE_RATE OSMillisecondsToTicks(16)
+// ~60 Hz (in nanoseconds)
+#define INPUT_UPDATE_RATE 16666666
 
-void handleTouch(u32 kHeld, touchPosition touch) {
+void handleTouch(uint32_t kHeld, touchPosition touch) {
   if (absolute_positioning) {
     if (kHeld & KEY_TOUCH) {
       LiSendMousePositionEvent(touch.px, touch.py, TOUCH_WIDTH, TOUCH_HEIGHT);
@@ -106,7 +107,7 @@ void n3ds_input_update(void) {
   for (int i = 0; i < n3ds_input_num_controllers(); i++)
     gamepad_mask |= 1 << i;
 
-  u32 btns = hidKeysHeld();
+  uint32_t btns = hidKeysHeld();
   circlePosition cPad, cStick;
   hidCircleRead(&cPad);
 	hidCstickRead(&cStick);
@@ -267,25 +268,30 @@ uint32_t n3ds_input_buttons_triggered(void)
   return hidKeysDown();
 }
 
+/*
 static void alarm_callback(OSAlarm* alarm, OSContext* ctx)
 {
   n3ds_input_update();
 }
+*/
 
 static int input_thread_proc()
 {
-  OSCreateAlarm(&inputAlarm);
-  OSSetPeriodicAlarm(&inputAlarm, 0, INPUT_UPDATE_RATE, alarm_callback);
+  //OSCreateAlarm(&inputAlarm);
+  //OSSetPeriodicAlarm(&inputAlarm, 0, INPUT_UPDATE_RATE, alarm_callback);
 
   while (thread_running) {
-    OSWaitAlarm(&inputAlarm);
+    svcSleepThread(INPUT_UPDATE_RATE);
+    n3ds_input_update();
   }
 }
 
+/*
 static void thread_deallocator(OSThread *thread, void *stack)
 {
   free(stack);
 }
+*/
 
 void start_input_thread(void)
 {
@@ -293,22 +299,21 @@ void start_input_thread(void)
   int stack_size = 4 * 1024 * 1024;
   void* stack_addr = (uint8_t *)memalign(8, stack_size) + stack_size;
 
-  if (!OSCreateThread(&inputThread,
-                      input_thread_proc,
-                      0, NULL,
-                      stack_addr, stack_size,
-                      0x10, OS_THREAD_ATTRIB_AFFINITY_ANY))
-  {
-    return;
-  }
+  inputThread = threadCreate(input_thread_proc,
+                  NULL, stack_size, 0x25, // Note: adjust 0x25 (between 0x18 and 0x3F) if input and/or video is broken
+                  -1, false);
+  //if (!inputThread)
+  //{
+  //  return;
+  //}
 
-  OSSetThreadDeallocator(&inputThread, thread_deallocator);
-  OSResumeThread(&inputThread);
+  //OSSetThreadDeallocator(&inputThread, thread_deallocator);
+  //OSResumeThread(&inputThread);
 }
 
 void stop_input_thread(void)
 {
   thread_running = 0;
-  OSCancelAlarm(&inputAlarm);
-  OSJoinThread(&inputThread, NULL);
+  //OSCancelAlarm(&inputAlarm);
+  threadJoin(inputThread, U64_MAX);
 }
