@@ -150,10 +150,14 @@ void platform_stop(enum platform system) {
 
 DECODER_RENDERER_CALLBACKS* platform_get_video(enum platform system) {
   switch (system) {
-#ifdef __3DS__
+  #ifdef __3DS__
   case N3DS:
+    return &decoder_callbacks_n3ds;
+  #endif
+  #ifdef __WIIU__
+  case WIIU:
     return &decoder_callbacks_wiiu;
-#endif
+  #endif
   #ifdef HAVE_X11
   case X11:
     return &decoder_callbacks_x11;
@@ -200,6 +204,10 @@ AUDIO_RENDERER_CALLBACKS* platform_get_audio(enum platform system, char* audio_d
   switch (system) {
   #ifdef __3DS__
   case N3DS:
+    return &audio_callbacks_n3ds;
+  #endif
+  #ifdef __WIIU__
+  case WIIU:
     return &audio_callbacks_wiiu;
   #endif
   case FAKE:
@@ -241,7 +249,7 @@ bool platform_supports_hevc(enum platform system) {
 char* platform_name(enum platform system) {
   switch(system) {
   case N3DS:
-    return "Nintendo 3DS";
+    return "New Nintendo 3DS";
   case WIIU:
     return "Nintendo Wii U";
   case PI:

@@ -51,8 +51,8 @@ void add_frame(C3D_Tex* msg);
 
 extern uint32_t nextFrame;
 
-extern AUDIO_RENDERER_CALLBACKS audio_callbacks_wiiu;
-extern DECODER_RENDERER_CALLBACKS decoder_callbacks_wiiu;
+extern AUDIO_RENDERER_CALLBACKS audio_callbacks_n3ds;
+extern DECODER_RENDERER_CALLBACKS decoder_callbacks_n3ds;
 
 // input
 void n3ds_input_init(void);

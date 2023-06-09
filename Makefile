@@ -57,7 +57,7 @@ SOURCE_FILES	:=
 #-------------------------------------------------------------------------------
 ARCH	:=	-march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft
 
-CFLAGS	:=	-O3 -mword-relocations \
+CFLAGS	:=	-DHAS_SOCKLEN_T -O3 -mword-relocations \
 			-ffunction-sections -fdata-sections \
 			$(MACHDEP)
 

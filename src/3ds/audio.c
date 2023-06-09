@@ -87,7 +87,7 @@ static void sdl_renderer_decode_and_play_sample(char* data, int length) {
   }
 }
 
-AUDIO_RENDERER_CALLBACKS audio_callbacks_wiiu = {
+AUDIO_RENDERER_CALLBACKS audio_callbacks_n3ds = {
   .init = sdl_renderer_init,
   .cleanup = sdl_renderer_cleanup,
   .decodeAndPlaySample = sdl_renderer_decode_and_play_sample,
