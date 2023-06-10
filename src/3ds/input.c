@@ -4,6 +4,7 @@
 
 #include <3ds/services/hid.h>
 #include <3ds/services/irrst.h>
+#include <3ds/services/apt.h>
 
 #include <time.h>
 #include <3ds/thread.h>
@@ -99,7 +100,8 @@ void n3ds_input_init(void)
 }
 
 void n3ds_input_update(void) {
-  static uint64_t start_pressed = 0;
+  static uint64_t home_pressed = 0;
+  static int is_home_triggered = 0;
 
   short controllerNumber = 0;
   short gamepad_mask = 0;
@@ -132,7 +134,8 @@ void n3ds_input_update(void) {
   if (swap_shoulders) {
     CHECKBTN(KEY_ZL,       LB_FLAG);
     CHECKBTN(KEY_ZR,       RB_FLAG);
-  } else {
+  }
+  else {
     CHECKBTN(KEY_L,       LB_FLAG);
     CHECKBTN(KEY_R,       RB_FLAG);
   }
@@ -141,9 +144,17 @@ void n3ds_input_update(void) {
 #undef CHECKBTN
 
   // If the button was just pressed, reset to current time
-  if (hidKeysDown() & KEY_START) start_pressed = millis();
+  if (!is_home_triggered) {
+    if (aptCheckHomePressRejected()) {
+      home_pressed = millis();
+      is_home_triggered = 1;
+    }
+  }
+  else if (is_home_triggered || !(aptCheckHomePressRejected())) {
+    is_home_triggered = 0;
+  }
 
-  if (btns & KEY_START  && millis() - start_pressed > 3000) {
+  if (aptCheckHomePressRejected() && millis() - home_pressed > 3000) {
     state = STATE_STOP_STREAM;
     return;
   }

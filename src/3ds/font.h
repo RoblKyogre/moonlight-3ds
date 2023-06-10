@@ -18,7 +18,7 @@ void Font_Deinit(void);
 
 void Font_Draw(void);
 
-void Font_Draw_TVDRC(void);
+void Font_Draw_Bottom(void);
 
 void Font_Clear(void);
 

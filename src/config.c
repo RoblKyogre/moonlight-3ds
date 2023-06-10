@@ -33,8 +33,8 @@
 #include <limits.h>
 
 #ifdef __3DS__
-extern int disable_gamepad;
 extern int swap_buttons;
+extern int swap_shoulders;
 extern int absolute_positioning;
 extern int autostream;
 
@@ -84,8 +84,8 @@ static struct option long_options[] = {
   {"verbose", no_argument, NULL, 'z'},
   {"debug", no_argument, NULL, 'Z'},
 #ifdef __3DS__
-  {"disable_gamepad", no_argument, NULL, 'A'},
-  {"swap_buttons", no_argument, NULL, 'B'},
+  {"swap_buttons", no_argument, NULL, 'A'},
+  {"swap_shoulders", no_argument, NULL, 'B'},
   {"autostream", no_argument, NULL, 'C'},
   {"absolute_positioning", no_argument, NULL, 'D'},
 #endif
@@ -267,10 +267,10 @@ static void parse_argument(int c, char* value, PCONFIGURATION config) {
     break;
 #ifdef __3DS__
   case 'A':
-    disable_gamepad = true;
+    swap_buttons = true;
     break;
   case 'B':
-    swap_buttons = true;
+    swap_shoulders = false;
     break;
   case 'C':
     autostream = true;

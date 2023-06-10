@@ -4,7 +4,8 @@
 #include <stdarg.h>
 #include <string.h>
 
-#include <coreinit/memory.h>
+#include <3ds/font.h>
+
 #include <whb/gfx.h>
 #include <gx2/draw.h>
 #include <gx2/registers.h>
@@ -13,8 +14,6 @@
 #include <gx2r/draw.h>
 #include <ft2build.h>
 #include FT_FREETYPE_H
-
-#include "shaders/font_texture.h"
 
 static WHBGfxShaderGroup fontShader = {};
 static GX2Texture fontTexture = {};
@@ -34,16 +33,15 @@ static const float font_vertex_buffer[] __attribute__ ((aligned (GX2_VERTEX_BUFF
 void Font_Init(void)
 {
     // Load the system font
-    void *font = NULL;
-    uint32_t size = 0;
-    OSGetSharedData(OS_SHAREDDATATYPE_FONT_STANDARD, 0, &font, &size);
+    CFNT_s *font = fontGetSystemFont();
+    uint32_t size = fontGetInfo(font)->sectionSize;
 
     if (font && size) {
         FT_Init_FreeType(&ft_lib);
         FT_New_Memory_Face(ft_lib, (FT_Byte *) font, size, 0, &ft_face);
     }
 
-    // Load the shader
+    /*// Load the shader
     WHBGfxLoadGFDShaderGroup(&fontShader, 0, font_texture_gsh);
 
     // Initialize the shader attributes
@@ -70,7 +68,7 @@ void Font_Init(void)
     GX2InitTextureRegs(&fontTexture);
 
     // Create a sampler
-    GX2InitSampler(&fontSampler, GX2_TEX_CLAMP_MODE_WRAP, GX2_TEX_MIP_FILTER_MODE_POINT);
+    GX2InitSampler(&fontSampler, GX2_TEX_CLAMP_MODE_WRAP, GX2_TEX_MIP_FILTER_MODE_POINT);*/
 
     // Clear the texture buffer
     Font_Clear();
@@ -98,7 +96,7 @@ void Font_Draw(void)
     GX2DrawEx(GX2_PRIMITIVE_MODE_QUADS, 4, 0, 1);
 }
 
-void Font_Draw_TVDRC(void)
+void Font_Draw_Bottom(void)
 {
     WHBGfxBeginRender();
 

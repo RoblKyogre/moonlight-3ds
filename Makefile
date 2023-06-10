@@ -55,9 +55,9 @@ SOURCE_FILES	:=
 #-------------------------------------------------------------------------------
 # options for code generation
 #-------------------------------------------------------------------------------
-ARCH	:=	-march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft
+ARCH	:=	-marm -mthumb-interwork -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft
 
-CFLAGS	:=	-DHAS_SOCKLEN_T -O3 -mword-relocations \
+CFLAGS	:=	-O3 -mword-relocations \
 			-ffunction-sections -fdata-sections \
 			$(MACHDEP)
 
@@ -68,7 +68,7 @@ CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++11
 ASFLAGS	:=	$(ARCH)
 LDFLAGS	=	$(ARCH) -specs=3dsx.specs
 
-LIBS	:= -lfreetype -lpng -lbz2 -lcurl -lssl -lcrypto -lSDL2 -lopus -lexpat -lz -lctru -lm
+LIBS	:= -lfreetype -lpng -lbz2 `curl-config --libs` -lssl -lcrypto -lSDL2 -lopus -lexpat -lz -lcitro2d -lcitro3d -lctru -lm
 
 #-------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level

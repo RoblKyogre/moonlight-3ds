@@ -135,12 +135,12 @@ static int stream(PSERVER_DATA server, PCONFIGURATION config, enum platform syst
 int main(int argc, char* argv[]) {
   n3ds_proc_init();
 
-  WHBGfxInit();
+  gfxInitDefault();
   n3ds_setup_renderstate();
 
 #ifdef DEBUG
   Debug_Init();
-  printf("Moonlight Wii U started\n");
+  printf("Moonlight 3DS started\n");
 #endif
 
   n3ds_input_init();
@@ -150,7 +150,7 @@ int main(int argc, char* argv[]) {
   Font_SetSize(50);
   Font_SetColor(255, 255, 255, 255);
   Font_Print(8, 58, "Reading configuration...");
-  Font_Draw_TVDRC();
+  Font_Draw_Bottom();
 
   CONFIGURATION config;
   config_parse(argc, argv, &config);
@@ -181,7 +181,7 @@ int main(int argc, char* argv[]) {
   while (n3ds_proc_running()) {
     switch (state) {
       case STATE_INVALID: {
-        Font_Draw_TVDRC();
+        Font_Draw_Bottom();
         break;
       }
       case STATE_DISCONNECTED: {
@@ -202,7 +202,7 @@ int main(int argc, char* argv[]) {
         Font_SetSize(50);
         Font_Print(8, 400, message_buffer);
 
-        Font_Draw_TVDRC();
+        Font_Draw_Bottom();
 
         uint32_t btns = n3ds_input_buttons_triggered();
         if (btns & KEY_A) {
@@ -219,7 +219,7 @@ int main(int argc, char* argv[]) {
         Font_SetColor(255, 255, 255, 255);
 
         Font_Printf(8, 58, "Connecting to %s...\n", config.address);
-        Font_Draw_TVDRC();
+        Font_Draw_Bottom();
 
         int ret;
         if ((ret = gs_init(&server, config.address, config.port, config.key_dir, config.debug_level, config.unsupported)) == GS_OUT_OF_MEMORY) {
@@ -282,7 +282,7 @@ int main(int argc, char* argv[]) {
         }
         Font_SetSize(50);
         Font_Print(8, 400, message_buffer);
-        Font_Draw_TVDRC();
+        Font_Draw_Bottom();
 
         uint32_t btns = n3ds_input_buttons_triggered();
         if (btns & KEY_A) {
@@ -302,7 +302,7 @@ int main(int argc, char* argv[]) {
         Font_SetSize(50);
         Font_SetColor(255, 255, 255, 255);
         Font_Printf(8, 58, "Please enter the following PIN on the target PC:\n%s\n", pin);
-        Font_Draw_TVDRC();
+        Font_Draw_Bottom();
         if (gs_pair(&server, &pin[0]) != GS_OK) {
           fprintf(stderr, "Failed to pair to server: %s\n", gs_error);
           sprintf(message_buffer, "Failed to pair to server:\n%s\n", gs_error);
@@ -328,7 +328,7 @@ int main(int argc, char* argv[]) {
         Font_SetColor(255, 255, 255, 255);
 
         Font_Print(8, 58, "Starting stream...");
-        Font_Draw_TVDRC();
+        Font_Draw_Bottom();
 
         if (server.paired) {
           enum platform system = N3DS;
@@ -377,7 +377,7 @@ int main(int argc, char* argv[]) {
 
   n3ds_stream_fini();
 
-  WHBGfxShutdown();
+  gfxExit();
 
   n3ds_proc_shutdown();
 
