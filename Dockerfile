@@ -58,9 +58,12 @@ WORKDIR /SDL
 RUN mkdir build
 WORKDIR /SDL/build
 
-ENV ARCH "-marm -mthumb-interwork -march=armv6k -mtune=mpcore -mfloat-abi=hard -mhard-float -mtp=soft"
+ENV ARCH "-march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft"
 ENV CFLAGS "-O3 -mword-relocations -ffunction-sections -fdata-sections ${ARCH}"
 ENV CXXFLAGS "${CFLAGS} -fno-rtti -fno-exceptions -std=c++11"
+ENV ASFLAGS	"${ARCH}"
+ENV LDFLAGS	"${ARCH} -L${DEVKITPRO}/libctru/lib"
+
 RUN cmake .. -DCMAKE_TOOLCHAIN_FILE="$DEVKITPRO/cmake/3DS.cmake" -DCMAKE_INSTALL_PREFIX=$DEVKITPRO/portlibs/3ds -DCMAKE_BUILD_TYPE=Release
 RUN make -j$(nproc) && make install
 WORKDIR /
@@ -76,7 +79,7 @@ RUN echo 'diff --git a/Configurations/10-main.conf b/Configurations/10-main.conf
 index 61c6689..efe686a 100644\n\
 --- a/Configurations/10-main.conf\n\
 +++ b/Configurations/10-main.conf\n\
-@@ -627,6 +627,27 @@ my %targets = (\n\
+@@ -627,6 +627,28 @@ my %targets = (\n\
          shared_extension => ".so",\n\
      },\n\
  \n\
@@ -92,9 +95,10 @@ index 61c6689..efe686a 100644\n\
 +        CXXFLAGS         => picker(default => "-Wall",\n\
 +                                   debug   => "-O0 -g",\n\
 +                                   release => "-O3"),\n\
-+        LDFLAGS          => "-L$ENV{DEVKITPRO}/libctru/lib",\n\
-+        cflags           => add("-mword-relocations -ffunction-sections -fdata-sections -marm -mthumb-interwork -march=armv6k -mtune=mpcore -mfloat-abi=hard -mhard-float -mtp=soft "),\n\
-+        cxxflags         => add("-fno-rtti -fno-exceptions -std=c++11"),\n\
++        LDFLAGS          => "-march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -specs=3dsx.specs -L$ENV{DEVKITPRO}/libctru/lib",\n\
++        asflags          => "-march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft",\n\
++        cflags           => add("-mword-relocations -ffunction-sections -fdata-sections -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft"),\n\
++        cxxflags         => add("-fno-rtti -fno-exceptions -std=c++11 -mword-relocations -ffunction-sections -fdata-sections -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft"),\n\
 +        lib_cppflags     => "-DSO_KEEPALIVE=0x0008 -DOPENSSL_USE_NODELETE -DB_ENDIAN -DNO_SYS_UN_H -DNO_SYSLOG -D__3DS__ -I$ENV{DEVKITPRO}/libctru/include",\n\
 +        ex_libs          => add("-lctru -lm"),\n\
 +        bn_ops           => "BN_LLONG RC4_CHAR",\n\
@@ -174,11 +178,12 @@ ARG expat_ver=2.5.0
 RUN curl -LO https://github.com/libexpat/libexpat/releases/download/R_$expat_tag/expat-$expat_ver.tar.gz && mkdir /expat && tar xf expat-$expat_ver.tar.gz -C /expat --strip-components=1
 WORKDIR /expat
 
-ENV ARCH "-marm -mthumb-interwork -march=armv6k -mtune=mpcore -mfloat-abi=hard -mhard-float -mtp=soft"
+ENV ARCH "-march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft"
 ENV CFLAGS "-O3 -mword-relocations -ffunction-sections -fdata-sections ${ARCH}"
 ENV CXXFLAGS "${CFLAGS} -fno-rtti -fno-exceptions -std=c++11"
 ENV CPPFLAGS "-D__3DS__ -I${DEVKITPRO}/libctru/include"
-ENV LDFLAGS "-L${DEVKITPRO}/libctru/lib"
+ENV ASFLAGS	"${ARCH}"
+ENV LDFLAGS	"${ARCH} -specs=3dsx.specs -L${DEVKITPRO}/libctru/lib"
 ENV LIBS "-lctru -lm"
 
 RUN autoreconf -fi
@@ -217,5 +222,7 @@ COPY --from=expatbuild /opt/devkitpro/portlibs/3ds/lib/libexpat.a /opt/devkitpro
 COPY --from=expatbuild /opt/devkitpro/portlibs/3ds/include/expat.h /opt/devkitpro/portlibs/3ds/include/expat.h
 COPY --from=expatbuild /opt/devkitpro/portlibs/3ds/include/expat_config.h /opt/devkitpro/portlibs/3ds/include/expat_config.h
 COPY --from=expatbuild /opt/devkitpro/portlibs/3ds/include/expat_external.h /opt/devkitpro/portlibs/3ds/include/expat_external.h
+
+RUN apt-get update && apt-get -y install --no-install-recommends elfutils && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /project

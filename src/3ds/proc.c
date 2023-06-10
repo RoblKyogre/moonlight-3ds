@@ -22,12 +22,12 @@ void n3ds_proc_shutdown(void)
 
 void n3ds_proc_register_home_callback(void)
 {
-    //no-op, no need to register home callback
+    //no-op, no need to register home callback function
 }
 
 int n3ds_proc_running(void)
 {
-    if (aptShouldClose()) {
+    if (!(aptMainLoop())) {
         running = false;
     }
 

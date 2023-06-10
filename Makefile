@@ -55,18 +55,18 @@ SOURCE_FILES	:=
 #-------------------------------------------------------------------------------
 # options for code generation
 #-------------------------------------------------------------------------------
-ARCH	:=	-marm -mthumb-interwork -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft
+ARCH	:=	-march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft
 
 CFLAGS	:=	-O3 -mword-relocations \
 			-ffunction-sections -fdata-sections \
-			$(MACHDEP)
+			$(ARCH)
 
 CFLAGS	+=	$(INCLUDE) -D__3DS__ -DBIGENDIAN
 
 CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++11
 
 ASFLAGS	:=	$(ARCH)
-LDFLAGS	=	$(ARCH) -specs=3dsx.specs
+LDFLAGS	=	-specs=3dsx.specs $(ARCH)
 
 LIBS	:= -lfreetype -lpng -lbz2 `curl-config --libs` -lssl -lcrypto -lSDL2 -lopus -lexpat -lz -lcitro2d -lcitro3d -lctru -lm
 
@@ -74,7 +74,7 @@ LIBS	:= -lfreetype -lpng -lbz2 `curl-config --libs` -lssl -lcrypto -lSDL2 -lopus
 # list of directories containing libraries, this must be the top level
 # containing include and lib
 #-------------------------------------------------------------------------------
-LIBDIRS	:= $(CTRULIB) $(DEVKITPRO)/portlibs/3ds
+LIBDIRS	:= $(CTRULIB) $(PORTLIBS)
 
 
 #-------------------------------------------------------------------------------
@@ -97,6 +97,9 @@ CFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c))) \
 			$(foreach f,$(SOURCE_FILES),$(notdir $(f)))
 CPPFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
 SFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
+PICAFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.v.pica)))
+SHLISTFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.shlist)))
+GFXFILES	:=	$(foreach dir,$(GRAPHICS),$(notdir $(wildcard $(dir)/*.t3s)))
 BINFILES	:=	$(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/*.*)))
 
 #-------------------------------------------------------------------------------
@@ -113,14 +116,21 @@ else
 endif
 #-------------------------------------------------------------------------------
 
-export OFILES_BIN	:=	$(addsuffix .o,$(BINFILES))
-export OFILES_SRC	:=	$(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
-export OFILES 	:=	$(OFILES_BIN) $(OFILES_SRC)
-export HFILES_BIN	:=	$(addsuffix .h,$(subst .,_,$(BINFILES)))
+export OFILES_SOURCES 	:=	$(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
+
+export OFILES_BIN	:=	$(addsuffix .o,$(BINFILES)) \
+			$(PICAFILES:.v.pica=.shbin.o) $(SHLISTFILES:.shlist=.shbin.o) \
+			$(addsuffix .o,$(T3XFILES))
+
+export OFILES := $(OFILES_BIN) $(OFILES_SOURCES)
+
+export HFILES	:=	$(PICAFILES:.v.pica=_shbin.h) $(SHLISTFILES:.shlist=_shbin.h) \
+			$(addsuffix .h,$(subst .,_,$(BINFILES))) \
+			$(GFXFILES:.t3s=.h)
 
 export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
 			$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
-			-I$(CURDIR)/$(BUILD) -I$(DEVKITPRO)/portlibs/3ds/include/
+			-I$(CURDIR)/$(BUILD)
 
 export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 
