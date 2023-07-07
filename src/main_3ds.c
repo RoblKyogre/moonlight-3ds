@@ -48,7 +48,8 @@
 void Debug_Init();
 #endif
 
-#define SCREEN_BAR "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501" \
+#define SCREEN_BAR "--------------------------------------\n"
+//#define SCREEN_BAR "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501" \
   "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501" \
   "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n"
 
@@ -138,14 +139,14 @@ int main(int argc, char* argv[]) {
   gfxInitDefault();
   n3ds_setup_renderstate();
 
+  n3ds_input_init();
+
+  Font_Init();
+
 #ifdef DEBUG
   Debug_Init();
   printf("Moonlight 3DS started\n");
 #endif
-
-  n3ds_input_init();
-
-  Font_Init();
 
   Font_SetSize(50);
   Font_SetColor(255, 255, 255, 255);
@@ -167,7 +168,7 @@ int main(int argc, char* argv[]) {
   }
   else {
     char host_config_file[PATH_MAX];
-    snprintf(host_config_file, PATH_MAX, "/vol/external01/moonlight/hosts/%s.conf", config.address);
+    snprintf(host_config_file, PATH_MAX, "/3ds/moonlight/hosts/%s.conf", config.address);
     if (access(host_config_file, R_OK) != -1)
       config_file_parse(host_config_file, &config);
     
@@ -189,9 +190,9 @@ int main(int argc, char* argv[]) {
         Font_SetSize(50);
         Font_SetColor(255, 255, 255, 255);
 
-        Font_Printf(8, 58, "Moonlight 3DS %s (Disconnected)\n"
+        Font_Printf(8, 58, "Moonlight 3DS %s\n(Disconnected)\n"
                            SCREEN_BAR
-                           "Press \ue000 to connect to %s", VERSION_STRING, config.address);
+                           "Press A to connect to %s\nPress START to exit", VERSION_STRING, config.address);
 
         if (is_error) {
           Font_SetColor(255, 0, 0, 255);
@@ -208,6 +209,8 @@ int main(int argc, char* argv[]) {
         if (btns & KEY_A) {
           message_buffer[0] = '\0';
           state = STATE_CONNECTING;
+        } else if (btns & KEY_START) {
+          n3ds_proc_stop_running();
         }
         break;
       }
@@ -270,9 +273,9 @@ int main(int argc, char* argv[]) {
         Font_SetSize(50);
         Font_SetColor(255, 255, 255, 255);
 
-        Font_Printf(8, 58, "Moonlight 3DS %s (Connected to %s)\n"
+        Font_Printf(8, 58, "Moonlight 3DS %s\n(Connected to %s)\n"
                            SCREEN_BAR
-                           "Press \ue000 to stream\nPress \ue001 to pair\n", VERSION_STRING, config.address);
+                           "Press A to stream\nPress B to pair\nPress START to exit\n", VERSION_STRING, config.address);
 
         if (is_error) {
           Font_SetColor(255, 0, 0, 255);
@@ -282,6 +285,7 @@ int main(int argc, char* argv[]) {
         }
         Font_SetSize(50);
         Font_Print(8, 400, message_buffer);
+
         Font_Draw_Bottom();
 
         uint32_t btns = n3ds_input_buttons_triggered();
@@ -291,6 +295,8 @@ int main(int argc, char* argv[]) {
         } else if (btns & KEY_B) {
           message_buffer[0] = '\0';
           state = STATE_PAIRING;
+        } else if (btns & KEY_START) {
+          n3ds_proc_stop_running();
         }
         break;
       }

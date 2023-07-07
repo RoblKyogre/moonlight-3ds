@@ -311,7 +311,7 @@ bool config_file_parse(char* filename, PCONFIGURATION config) {
   size_t len = 0;
 
   while (getline(&line, &len, fd) != -1) {
-#ifndef __3DS__ // Wii U doesn't like %m
+#ifndef __3DS__ // 3DS doesn't like %m
   char *key = NULL, *value = NULL;
     if (sscanf(line, "%ms = %m[^\n]", &key, &value) == 2) {
 #else
@@ -400,6 +400,9 @@ void config_parse(int argc, char* argv[], PCONFIGURATION config) {
 
 #ifdef __3DS__
   config->stream.encryptionFlags = ENCFLG_NONE;
+  config->stream.width = 640;
+  config->stream.height = 360;
+  config->stream.bitrate = 1000;
   config->stream.fps = 30;
 #endif
 

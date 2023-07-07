@@ -9,6 +9,9 @@ endif
 TOPDIR ?= $(CURDIR)
 include $(DEVKITARM)/3ds_rules
 
+MAKEROM 	?= makerom
+BANNERTOOL 	?= bannertool
+
 #-------------------------------------------------------------------------------
 # TARGET is the name of the output
 # BUILD is the directory where object files & intermediate files will be placed
@@ -52,6 +55,16 @@ INCLUDES	:=	src/3ds \
 
 SOURCE_FILES	:=	
 
+APP_TITLE			:= Moonlight 3DS
+APP_DESCRIPTION		:= Moonlight Game Streaming
+APP_AUTHOR			:= RoblKyogre
+ICON				:= app/icon.png
+APP_PRODUCT_CODE	:= CTR-HB-MOON
+APP_UNIQUE_ID		:= 0xffb3a
+BANNER_IMAGE		:= app/banner.png
+BANNER_AUDIO		:= app/banner.wav
+RSF_FILE			:= app/cia.rsf
+
 #-------------------------------------------------------------------------------
 # options for code generation
 #-------------------------------------------------------------------------------
@@ -61,14 +74,14 @@ CFLAGS	:=	-O3 -mword-relocations \
 			-ffunction-sections -fdata-sections \
 			$(ARCH)
 
-CFLAGS	+=	$(INCLUDE) -D__3DS__ -DBIGENDIAN
+CFLAGS	+=	$(INCLUDE) -D__3DS__ -DBIGENDIAN -DLC_DEBUG -DENET_DEBUG 
 
 CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++11
 
 ASFLAGS	:=	$(ARCH)
 LDFLAGS	=	-specs=3dsx.specs $(ARCH)
 
-LIBS	:= -lfreetype -lpng -lbz2 `curl-config --libs` -lssl -lcrypto -lSDL2 -lopus -lexpat -lz -lcitro2d -lcitro3d -lctru -lm
+LIBS	:= -lfreetype -lpng -lbz2 `curl-config --libs` -lmbedtls -lssl -lcrypto -lSDL2 -lopus -lexpat -lz -lcitro2d -lcitro3d -lctru -lm
 
 #-------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level
@@ -157,15 +170,21 @@ ifneq ($(ROMFS),)
 	export _3DSXFLAGS += --romfs=$(CURDIR)/$(ROMFS)
 endif
 
-.PHONY: $(BUILD) clean all dist
+.PHONY: $(BUILD) clean all dist 3dsx cia
 
 #-------------------------------------------------------------------------------
 all: $(BUILD) $(GFXBUILD) $(DEPSDIR) $(ROMFS_T3XFILES) $(T3XHFILES)
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
 dist: all
-	cp moonlight.conf dist/3ds/moonlight/
-	cp moonlight.3dsx dist/3ds/moonlight/
+	mkdir -p dist/common/3ds/moonlight dist/3dsx/3ds/moonlight dist/cia/3ds/moonlight
+	cp app/moonlight.conf dist/common/3ds/moonlight/
+	cp -R dist/common/3ds/moonlight dist/3dsx/3ds/moonlight
+	cp -R dist/common/3ds/moonlight dist/cia/3ds/moonlight
+	cp moonlight.3dsx dist/3dsx/3ds/moonlight/
+	cp moonlight.smdh dist/3dsx/3ds/moonlight/
+	cp moonlight.cia dist/cia/
+
 
 $(BUILD):
 	@mkdir -p $@
@@ -183,7 +202,7 @@ endif
 #---------------------------------------------------------------------------------
 clean:
 	@echo clean ...
-	@rm -fr $(BUILD) $(TARGET).3dsx $(OUTPUT).smdh $(TARGET).elf $(GFXBUILD)
+	@rm -fr $(BUILD) $(TARGET).cia $(TARGET).3dsx $(OUTPUT).smdh $(TARGET).elf $(GFXBUILD)
 
 #---------------------------------------------------------------------------------
 $(GFXBUILD)/%.t3x	$(BUILD)/%.h	:	%.t3s
@@ -197,7 +216,15 @@ else
 #-------------------------------------------------------------------------------
 # main targets
 #-------------------------------------------------------------------------------
+
+both: $(OUTPUT).3dsx $(OUTPUT).cia
+
 $(OUTPUT).3dsx	:	$(OUTPUT).elf $(_3DSXDEPS)
+
+$(OUTPUT).cia	:	$(OUTPUT).elf $(_3DSXDEPS)
+	@$(BANNERTOOL) makebanner -i "$(TOPDIR)/$(BANNER_IMAGE)" -a "$(TOPDIR)/$(BANNER_AUDIO)" -o "$(DEPSDIR)/banner.bin"
+	@$(MAKEROM) -f cia -target t -exefslogo -o "$(OUTPUT).cia" -elf "$(OUTPUT).elf" -rsf "$(TOPDIR)/$(RSF_FILE)" -banner "$(DEPSDIR)/banner.bin" -icon "$(OUTPUT).smdh"
+	@echo built ... $(notdir $@)
 
 $(OFILES_SOURCES) : $(HFILES)
 

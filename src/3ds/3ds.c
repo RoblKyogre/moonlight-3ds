@@ -63,9 +63,10 @@ void n3ds_stream_init(uint32_t width, uint32_t height)
   LightLock_Init(&queueMutex);
   queueReadIndex = queueWriteIndex = 0;
   
-  gfxInitDefault();
   C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
   C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
+
+  C2D_Prepare();
   
   topScreen = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
 
@@ -192,8 +193,6 @@ void add_frame(C3D_Tex* msg)
 
 void n3ds_setup_renderstate(void)
 {
-  C2D_Prepare();
-
   /*WHBGfxBeginRenderTV();
   GX2SetColorControl(GX2_LOGIC_OP_COPY, 0xFF, FALSE, TRUE);
   GX2SetBlendControl(GX2_RENDER_TARGET_0,

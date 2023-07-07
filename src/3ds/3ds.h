@@ -23,7 +23,7 @@ enum {
 #include <3ds/types.h>
 #include <3ds/gpu/enums.h>
 #include <c3d/texture.h>
-//#include "font.h"
+#include "font.h"
 
 //#include <gx2/texture.h>
 

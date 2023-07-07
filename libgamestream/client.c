@@ -844,7 +844,7 @@ int gs_init(PSERVER_DATA server, char *address, unsigned short httpPort, const c
 #ifndef __3DS__
   mkdirtree(keyDirectory);
 #else
-  // the above will fail on the Wii U due to the /vol/external01
+  // the above will fail on the Wii U due to the /3ds
   mkdir(keyDirectory, 0775);
 #endif
   if (load_unique_id(keyDirectory) != GS_OK)

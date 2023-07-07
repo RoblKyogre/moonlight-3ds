@@ -1,11 +1,11 @@
 /.vscode/
 /build/
+/dist/
 *.3dsx
 *.cia
 *.smdh
 *.elf
-*.gsh
 *.zip
 
 # will be auto-copied from 'make dist'
-dist/3ds/moonlight/moonlight.conf
+dist/*/moonlight.conf

@@ -9,6 +9,7 @@
 #include <time.h>
 #include <3ds/thread.h>
 #include <3ds/os.h>
+#include <3ds/svc.h>
 
 #define millis() osGetTime()
 
@@ -108,7 +109,9 @@ void n3ds_input_update(void) {
 
   for (int i = 0; i < n3ds_input_num_controllers(); i++)
     gamepad_mask |= 1 << i;
-
+  
+  hidScanInput();
+  irrstScanInput();
   uint32_t btns = hidKeysHeld();
   circlePosition cPad, cStick;
   hidCircleRead(&cPad);
@@ -144,17 +147,9 @@ void n3ds_input_update(void) {
 #undef CHECKBTN
 
   // If the button was just pressed, reset to current time
-  if (!is_home_triggered) {
-    if (aptCheckHomePressRejected()) {
-      home_pressed = millis();
-      is_home_triggered = 1;
-    }
-  }
-  else if (is_home_triggered || !(aptCheckHomePressRejected())) {
-    is_home_triggered = 0;
-  }
+  if (hidKeysDown() & KEY_START) home_pressed = millis();
 
-  if (aptCheckHomePressRejected() && millis() - home_pressed > 3000) {
+  if (btns & KEY_START && millis() - home_pressed > 3000) {
     state = STATE_STOP_STREAM;
     return;
   }
@@ -276,6 +271,7 @@ uint32_t n3ds_input_num_controllers(void)
 
 uint32_t n3ds_input_buttons_triggered(void)
 {
+  hidScanInput();
   return hidKeysDown();
 }
 
@@ -286,7 +282,7 @@ static void alarm_callback(OSAlarm* alarm, OSContext* ctx)
 }
 */
 
-static int input_thread_proc()
+static void input_thread_proc(void *arg)
 {
   //OSCreateAlarm(&inputAlarm);
   //OSSetPeriodicAlarm(&inputAlarm, 0, INPUT_UPDATE_RATE, alarm_callback);
@@ -309,8 +305,11 @@ void start_input_thread(void)
   thread_running = 1;
   int stack_size = 4 * 1024 * 1024;
 
+  s32 prio = 0;
+  svcGetThreadPriority(&prio, CUR_THREAD_HANDLE);
+
   inputThread = threadCreate(input_thread_proc,
-                  NULL, stack_size, 0x25, // Note: adjust 0x25 (between 0x18 and 0x3F) if input and/or video is broken
+                  NULL, stack_size, prio-2, // Note: adjust 0x25 (between 0x18 and 0x3F) if input and/or video is broken
                   -1, false);
   //if (!inputThread)
   //{

@@ -5,6 +5,7 @@
 #include <3ds.h>
 #include <3ds/types.h>
 #include <3ds/services/mvd.h>
+#include <3ds/allocator/linear.h>
 //#include <citro3d.h>
 //#include <gx2/mem.h>
 
@@ -15,12 +16,12 @@
 #include <string.h>
 
 // memory requirement for the maximum supported level (level 42)
-#define H264_MEM_REQUIREMENT (0x2200000 + 0x3ff + 0x480000)
-#define H264_MEM_ALIGNMENT 0x400
-#define H264_FRAME_SIZE(w, h) (((w) * (h) * 3) >> 1)
-#define H264_FRAME_PITCH(w) (((w) + 0xff) & ~0xff)
-#define H264_FRAME_HEIGHT(h) (((h) + 0xf) & ~0xf)
-#define H264_MAX_FRAME_SIZE H264_FRAME_SIZE(H264_FRAME_PITCH(2800), 1408)
+//#define H264_MEM_REQUIREMENT (0x2200000 + 0x3ff + 0x480000)
+//#define H264_MEM_ALIGNMENT 0x400
+//#define H264_FRAME_SIZE(w, h) (((w) * (h) * 3) >> 1)
+//#define H264_FRAME_PITCH(w) (((w) + 0xff) & ~0xff)
+//#define H264_FRAME_HEIGHT(h) (((h) + 0xf) & ~0xf)
+//#define H264_MAX_FRAME_SIZE H264_FRAME_SIZE(H264_FRAME_PITCH(2800), 1408)
 
 #define DECODER_BUFFER_SIZE 92*1024
 
@@ -29,8 +30,8 @@ uint32_t currentTexture;
 
 static MVDSTD_Config config;
 
-static uint32_t* decoder;
-static void* decodebuffer;
+static uint8_t* outBuf;
+static uint8_t* inBuf;
 
 /*static void createYUVTextures(GX2Texture* yPlane, GX2Texture* uvPlane, uint32_t width, uint32_t height)
 {
@@ -82,9 +83,9 @@ static int n3ds_decoder_setup(int videoFormat, int width, int height, int redraw
     return -1;
   }
 
-  decoder = linearMemAlign(H264_MEM_ALIGNMENT, H264_MEM_REQUIREMENT);
-  if (decoder == NULL) {
-    fprintf(stderr, "Not enough memory\n");
+  outBuf = linearMemAlign(0x1000000, 0x40);
+  if (!outBuf) {
+    fprintf(stderr, "Failed to allocate outBuf!\n");
     return -1;
   }
 
@@ -94,13 +95,15 @@ static int n3ds_decoder_setup(int videoFormat, int width, int height, int redraw
   //  return -1;
   //}
   
+  fprintf(stderr, "Initing mvd...\n");
   int res = mvdstdInit(MVDMODE_VIDEOPROCESSING, MVD_INPUT_H264, MVD_OUTPUT_BGR565, MVD_DEFAULT_WORKBUF_SIZE, NULL);
   if (res != 0) {
     printf("mvd_3ds: Error initializing decoder 0x%07X\n", res);
     return -1;
   }
 
-  mvdstdGenerateDefaultConfig(&config, height, width, 256, 512, NULL, (uint32_t*)decoder, (uint32_t*)decoder);
+  fprintf(stderr, "Generating mvd config...\n");
+  mvdstdGenerateDefaultConfig(&config, height, width, 256, 512, NULL, (uint32_t*)outBuf, (uint32_t*)outBuf);
 
   //res = H264DECSetParam_FPTR_OUTPUT(decoder, frame_callback);
   //if (res != 0) {
@@ -137,9 +140,10 @@ static int n3ds_decoder_setup(int videoFormat, int width, int height, int redraw
   }*/
   currentTexture = 0;
 
-  decodebuffer = linearMemAlign(H264_MEM_ALIGNMENT, DECODER_BUFFER_SIZE + 64);
-  if (decodebuffer == NULL) {
-    fprintf(stderr, "Not enough memory\n");
+  fprintf(stderr, "Allocating inBuf...\n");
+  inBuf = linearMemAlign(0x1000000, 0x40);
+  if (!inBuf) {
+    fprintf(stderr, "Failed to allocate inBuf!\n");
     return -1;
   }
 
@@ -152,10 +156,10 @@ static void n3ds_decoder_cleanup() {
   //H264DECClose(decoder);
   mvdstdExit();
 
-  free(decoder);
-  decoder = NULL;
-  free(decodebuffer);
-  decodebuffer = NULL;
+  linearFree(outBuf);
+  outBuf = NULL;
+  linearFree(inBuf);
+  inBuf = NULL;
 
   /*for (int i = 0; i < NUM_BUFFERS; i++) {
     free(textures[i].yTex.surface.image);
@@ -172,14 +176,14 @@ static int n3ds_decoder_submit_decode_unit(PDECODE_UNIT decodeUnit) {
   PLENTRY entry = decodeUnit->bufferList;
   int length = 0;
   while (entry != NULL) {
-    memcpy(decodebuffer+length, entry->data, entry->length);
+    memcpy(inBuf+length, entry->data, entry->length);
     length += entry->length;
     entry = entry->next;
   }
 
   MVDSTD_ProcessNALUnitOut tmpout;
 
-  int res = mvdstdProcessVideoFrame(decodebuffer, length, 0, &tmpout);
+  int res = mvdstdProcessVideoFrame(inBuf, length, 0, &tmpout);
   if (res != 0) {
     printf("mvd_3ds: Error processing frame 0x%07X\n", res);
     return DR_NEED_IDR;
@@ -193,7 +197,7 @@ static int n3ds_decoder_submit_decode_unit(PDECODE_UNIT decodeUnit) {
     return DR_NEED_IDR;
   }
   
-  C3D_TexLoadImage(tex, decoder, GPU_TEXFACE_2D, 0);
+  C3D_TexLoadImage(tex, outBuf, GPU_TEXFACE_2D, 0);
   
   nextFrame++;
 

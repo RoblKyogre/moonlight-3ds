@@ -4,17 +4,15 @@
 #include <stdarg.h>
 #include <string.h>
 #include <stdlib.h>
+#include <wchar.h>
 
 #include <3ds/console.h>
 
 static uint8_t font_r = 255, font_g = 255, font_b = 255, font_a = 255;
 
-static PrintConsole* bottomScreenConsole;
-
 void Font_Init(void)
 {
-    consoleInit(GFX_BOTTOM, bottomScreenConsole);
-    consoleSelect(bottomScreenConsole);
+    consoleInit(GFX_BOTTOM, NULL);
 
     // Clear the texture buffer
     Font_Clear();
@@ -35,16 +33,17 @@ void Font_Draw_Bottom(void)
     Font_Draw();
     gfxFlushBuffers();
 	gfxSwapBuffers();
+    gspWaitForVBlank();
 }
 
 void Font_Clear(void)
 {
-    printf("\x1b[2J");
+    consoleClear();
 }
 
 void Font_Printw(uint32_t x, uint32_t y, const wchar_t* string)
 {
-    printf(string);
+    wprintf(string);
 }
 
 void Font_Print(uint32_t x, uint32_t y, const char* string)

@@ -36,7 +36,7 @@ index edee7db..61db4a4 100644\n\
 -#define AF_INET6        PF_INET6\n\
 +//#define AF_INET6        PF_INET6\n\
  \n #define SOCK_STREAM     1\n #define SOCK_DGRAM      2\n\
-' >> servent.patch && git apply servent.patch
+' >> ctrupatches.patch && git apply ctrupatches.patch
 
 WORKDIR /libctru/libctru
 RUN make -j$(nproc)
@@ -202,6 +202,15 @@ PKG_CONFIG=$DEVKITPRO/portlibs/3ds/bin/arm-none-eabi-pkg-config
 RUN make -j$(nproc) && make install
 WORKDIR /
 
+# download build utils
+FROM builder as tooldownload
+
+ARG bannertool_tag=1.2.0
+ARG makerom_tag=0.18.3
+
+RUN curl -LO "https://github.com/Steveice10/bannertool/releases/download/${bannertool_tag}/bannertool.zip" && mkdir /bannertool && unzip bannertool.zip -d /bannertool
+RUN curl -LO "https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v${makerom_tag}/makerom-v${makerom_tag}-ubuntu_x86_64.zip" && mkdir /makerom && unzip "makerom-v${makerom_tag}-ubuntu_x86_64.zip" -d /makerom && chmod +x /makerom/makerom
+
 # build final container
 FROM devkitpro/devkitarm:20230526 AS final
 
@@ -223,6 +232,8 @@ COPY --from=expatbuild /opt/devkitpro/portlibs/3ds/include/expat.h /opt/devkitpr
 COPY --from=expatbuild /opt/devkitpro/portlibs/3ds/include/expat_config.h /opt/devkitpro/portlibs/3ds/include/expat_config.h
 COPY --from=expatbuild /opt/devkitpro/portlibs/3ds/include/expat_external.h /opt/devkitpro/portlibs/3ds/include/expat_external.h
 
-RUN apt-get update && apt-get -y install --no-install-recommends elfutils && rm -rf /var/lib/apt/lists/*
+# copy in build utils
+COPY --from=tooldownload /bannertool/linux-x86_64/bannertool /usr/bin/bannertool
+COPY --from=tooldownload /makerom/makerom /usr/bin/makerom
 
 WORKDIR /project
