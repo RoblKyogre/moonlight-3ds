@@ -32,10 +32,10 @@ static uint64_t touchDownMillis = 0;
 
 static int thread_running;
 static Thread inputThread;
-//static OSAlarm inputAlarm;
+//static Handle inputAlarm;
 
-// ~60 Hz (in nanoseconds)
-#define INPUT_UPDATE_RATE 16666666
+// ~60 Hz
+#define INPUT_UPDATE_RATE 16 * 1000000
 
 void handleTouch(uint32_t kHeld, touchPosition touch) {
   if (absolute_positioning) {
@@ -275,20 +275,21 @@ uint32_t n3ds_input_buttons_triggered(void)
   return hidKeysDown();
 }
 
-/*
-static void alarm_callback(OSAlarm* alarm, OSContext* ctx)
-{
-  n3ds_input_update();
-}
-*/
+
+//static void alarm_callback(OSAlarm* alarm, OSContext* ctx)
+//{
+//  n3ds_input_update();
+//}
+
 
 static void input_thread_proc(void *arg)
 {
-  //OSCreateAlarm(&inputAlarm);
-  //OSSetPeriodicAlarm(&inputAlarm, 0, INPUT_UPDATE_RATE, alarm_callback);
+  //svcCreateTimer(&inputAlarm, RESET_PULSE);
+  //svcSetTimer(inputAlarm, 0, INPUT_UPDATE_RATE);
 
   while (thread_running) {
     svcSleepThread(INPUT_UPDATE_RATE);
+    //svcWaitSynchronization(inputAlarm, 0);
     n3ds_input_update();
   }
 }
@@ -309,7 +310,7 @@ void start_input_thread(void)
   svcGetThreadPriority(&prio, CUR_THREAD_HANDLE);
 
   inputThread = threadCreate(input_thread_proc,
-                  NULL, stack_size, prio-2, // Note: adjust 0x25 (between 0x18 and 0x3F) if input and/or video is broken
+                  NULL, stack_size, prio-1,
                   -1, false);
   //if (!inputThread)
   //{
@@ -323,6 +324,6 @@ void start_input_thread(void)
 void stop_input_thread(void)
 {
   thread_running = 0;
-  //OSCancelAlarm(&inputAlarm);
+  //svcCancelTimer(inputAlarm);
   threadJoin(inputThread, U64_MAX);
 }

@@ -170,6 +170,50 @@ RUN make build_generated
 RUN make libssl.a libcrypto.a -j$(nproc)
 WORKDIR /
 
+# build curl
+#FROM builder as curlbuild
+#ARG curl_ver=7.76.1
+
+# copy in openssl
+#COPY --from=opensslbuild /openssl/libcrypto.a /openssl/libssl.a /opt/devkitpro/portlibs/3ds/lib/
+#COPY --from=opensslbuild /openssl/include/openssl /opt/devkitpro/portlibs/3ds/include/openssl/
+#COPY --from=opensslbuild /openssl/include/crypto /opt/devkitpro/portlibs/3ds/include/crypto/
+
+#RUN wget https://curl.se/download/curl-$curl_ver.tar.gz && mkdir /curl && tar xf curl-$curl_ver.tar.gz -C /curl --strip-components=1
+#WORKDIR /curl
+
+#ENV ARCH "-march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft"
+#ENV CFLAGS "-O3 -mword-relocations -ffunction-sections -fdata-sections ${ARCH}"
+#ENV CXXFLAGS "${CFLAGS} -fno-rtti -fno-exceptions -std=c++11"
+#ENV CPPFLAGS "-DSO_KEEPALIVE=0x0008 -D__3DS__ -I${DEVKITPRO}/libctru/include"
+#ENV ASFLAGS	"${ARCH}"
+#ENV LDFLAGS	"${ARCH} -specs=3dsx.specs -L${DEVKITPRO}/libctru/lib"
+#ENV LIBS "-lctru -lm"
+
+#RUN autoreconf -fi
+#RUN ./configure \
+#--prefix=$DEVKITPRO/portlibs/3ds/ \
+#--host=arm-none-eabi \
+#--enable-static \
+#--enable-rtsp \
+#--disable-threaded-resolver \
+#--disable-pthreads \
+#--with-ssl=$DEVKITPRO/portlibs/3ds/ \
+#--disable-ipv6 \
+#--disable-unix-sockets \
+#--disable-socketpair \
+#--disable-ntlm-wb \
+#CC=$DEVKITARM/bin/arm-none-eabi-gcc \
+#AR=$DEVKITARM/bin/arm-none-eabi-ar \
+#RANLIB=$DEVKITARM/bin/arm-none-eabi-ranlib \
+#PKG_CONFIG=$DEVKITPRO/portlibs/3ds/bin/arm-none-eabi-pkg-config
+
+#WORKDIR /curl/lib
+#RUN make -j$(nproc) install
+#WORKDIR /curl/include
+#RUN make -j$(nproc) install
+#WORKDIR /
+
 # build expat
 FROM builder as expatbuild
 ARG expat_tag=2_5_0
@@ -225,6 +269,10 @@ COPY --from=sdlbuild /opt/devkitpro/portlibs/3ds/include/SDL2 /opt/devkitpro/por
 COPY --from=opensslbuild /openssl/libcrypto.a /openssl/libssl.a /opt/devkitpro/portlibs/3ds/lib/
 COPY --from=opensslbuild /openssl/include/openssl /opt/devkitpro/portlibs/3ds/include/openssl/
 COPY --from=opensslbuild /openssl/include/crypto /opt/devkitpro/portlibs/3ds/include/crypto/
+
+# copy in curl
+#COPY --from=curlbuild /opt/devkitpro/portlibs/3ds/lib/libcurl.a /opt/devkitpro/portlibs/3ds/lib/
+#COPY --from=curlbuild /opt/devkitpro/portlibs/3ds/include/curl /opt/devkitpro/portlibs/3ds/include/curl/
 
 # copy in expat
 COPY --from=expatbuild /opt/devkitpro/portlibs/3ds/lib/libexpat.a /opt/devkitpro/portlibs/3ds/lib/

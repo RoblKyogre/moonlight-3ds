@@ -59,8 +59,8 @@ APP_TITLE			:= Moonlight 3DS
 APP_DESCRIPTION		:= Moonlight Game Streaming
 APP_AUTHOR			:= RoblKyogre
 ICON				:= app/icon.png
-APP_PRODUCT_CODE	:= CTR-HB-MOON
-APP_UNIQUE_ID		:= 0xffb3a
+APP_PRODUCT_CODE	:= CTR-H-MOON
+APP_UNIQUE_ID		:= 0x44b3a
 BANNER_IMAGE		:= app/banner.png
 BANNER_AUDIO		:= app/banner.wav
 RSF_FILE			:= app/cia.rsf
@@ -74,7 +74,7 @@ CFLAGS	:=	-O3 -mword-relocations \
 			-ffunction-sections -fdata-sections \
 			$(ARCH)
 
-CFLAGS	+=	$(INCLUDE) -D__3DS__ -DBIGENDIAN -DLC_DEBUG -DENET_DEBUG 
+CFLAGS	+=	$(INCLUDE) -D__3DS__ -DBIGENDIAN -DUSE_MBEDTLS -DLC_DEBUG -DENET_DEBUG 
 
 CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++11
 

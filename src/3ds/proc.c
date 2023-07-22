@@ -36,14 +36,14 @@ void n3ds_proc_init(void)
 
     osSetSpeedupEnable(1);
 
-    APT_SetAppCpuTimeLimit(90);
+    //APT_SetAppCpuTimeLimit(30);
 
     acWaitInternetConnection();
 
     NDMU_EnterExclusiveState(NDM_EXCLUSIVE_STATE_INFRASTRUCTURE);
     NDMU_LockState();
 
-    svcSetThreadPriority(CUR_THREAD_HANDLE, 0x20);
+    svcSetThreadPriority(CUR_THREAD_HANDLE, 0x23);
 
     running = 1;
 
