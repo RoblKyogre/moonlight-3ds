@@ -1,6 +1,7 @@
 #include "3ds.h"
 
 #include <sps.h>
+#include <h264_stream.h>
 
 #include <3ds.h>
 #include <3ds/types.h>
@@ -17,7 +18,7 @@
 
 // memory requirement for the maximum supported level (level 42)
 //#define H264_MEM_REQUIREMENT (0x2200000 + 0x3ff + 0x480000)
-//#define H264_MEM_ALIGNMENT 0x400
+#define H264_MEM_ALIGNMENT 0x40
 //#define H264_FRAME_SIZE(w, h) (((w) * (h) * 3) >> 1)
 //#define H264_FRAME_PITCH(w) (((w) + 0xff) & ~0xff)
 //#define H264_FRAME_HEIGHT(h) (((h) + 0xf) & ~0xf)
@@ -32,6 +33,9 @@ static MVDSTD_Config config;
 
 static uint8_t* outBuf;
 static uint8_t* inBuf;
+
+// Separate buffer to process nal units out of the bitstream
+static uint8_t* unitBuf;
 
 /*static void createYUVTextures(GX2Texture* yPlane, GX2Texture* uvPlane, uint32_t width, uint32_t height)
 {
@@ -83,7 +87,7 @@ static int n3ds_decoder_setup(int videoFormat, int width, int height, int redraw
     return -1;
   }
 
-  outBuf = linearMemAlign(0x1000000, 0x40);
+  outBuf = linearMemAlign(0x100000, H264_MEM_ALIGNMENT);
   if (!outBuf) {
     fprintf(stderr, "Failed to allocate outBuf!\n");
     return -1;
@@ -140,8 +144,7 @@ static int n3ds_decoder_setup(int videoFormat, int width, int height, int redraw
   }*/
   currentTexture = 0;
 
-  fprintf(stderr, "Allocating inBuf...\n");
-  inBuf = linearMemAlign(0x1000000, 0x40);
+  inBuf = linearMemAlign(DECODER_BUFFER_SIZE + 64, H264_MEM_ALIGNMENT);
   if (!inBuf) {
     fprintf(stderr, "Failed to allocate inBuf!\n");
     return -1;
@@ -169,7 +172,7 @@ static void n3ds_decoder_cleanup() {
 
 static int n3ds_decoder_submit_decode_unit(PDECODE_UNIT decodeUnit) {
   if (decodeUnit->fullLength > DECODER_BUFFER_SIZE) {
-    fprintf(stderr, "Video decode buffer too small\n");
+    fprintf(stderr, "Video bitstream buffer too small\n");
     return DR_OK;
   }
 
@@ -183,8 +186,8 @@ static int n3ds_decoder_submit_decode_unit(PDECODE_UNIT decodeUnit) {
 
   MVDSTD_ProcessNALUnitOut tmpout;
 
-  int res = mvdstdProcessVideoFrame(inBuf, length, 0, &tmpout);
-  if (res != 0) {
+  int res = mvdstdProcessVideoFrame(inBuf+4, length, 0, &tmpout);
+  if (!MVD_CHECKNALUPROC_SUCCESS(res)) {
     printf("mvd_3ds: Error processing frame 0x%07X\n", res);
     return DR_NEED_IDR;
   }
@@ -192,7 +195,7 @@ static int n3ds_decoder_submit_decode_unit(PDECODE_UNIT decodeUnit) {
   C3D_Tex* tex = &textures[currentTexture];
   
   res = mvdstdRenderVideoFrame(&config, true);
-  if (res != 0) {
+  if (res!=MVD_STATUS_OK) {
     printf("mvd_3ds: Error rendering frame 0x%07X\n", res);
     return DR_NEED_IDR;
   }

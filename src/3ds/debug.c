@@ -23,7 +23,7 @@ void __wrap_abort() {
 void Debug_Init() {
   int res = link3dsStdio();
   printf("%d",res);
-  //devoptab_list[STD_OUT] = &dotab_stdout;
-  //devoptab_list[STD_ERR] = &dotab_stdout;
+  devoptab_list[STD_OUT] = &dotab_stdout;
+  devoptab_list[STD_ERR] = &dotab_stdout;
 }
 #endif

@@ -74,7 +74,7 @@ CFLAGS	:=	-O3 -mword-relocations \
 			-ffunction-sections -fdata-sections \
 			$(ARCH)
 
-CFLAGS	+=	$(INCLUDE) -D__3DS__ -DBIGENDIAN -DUSE_MBEDTLS -DLC_DEBUG -DENET_DEBUG 
+CFLAGS	+=	$(INCLUDE) -D__3DS__ -DBIGENDIAN -DUSE_MBEDTLS
 
 CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++11
 
