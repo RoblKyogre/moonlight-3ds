@@ -1,4 +1,4 @@
-# Currently attempting this project, does not compile at this point in time
+# Warning: Project is not currently in a usable state (it compiles, but it is currently broken)
 
 # Moonlight 3DS
 
