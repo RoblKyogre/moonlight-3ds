@@ -1,7 +1,6 @@
 #include "3ds.h"
 
 #include <sps.h>
-#include <h264_stream.h>
 
 #include <3ds.h>
 #include <3ds/types.h>
