@@ -34,9 +34,6 @@ static MVDSTD_Config config;
 static uint8_t* outBuf;
 static uint8_t* inBuf;
 
-// Separate buffer to process nal units out of the bitstream
-static uint8_t* unitBuf;
-
 /*static void createYUVTextures(GX2Texture* yPlane, GX2Texture* uvPlane, uint32_t width, uint32_t height)
 {
   memset(yPlane, 0, sizeof(GX2Texture));
