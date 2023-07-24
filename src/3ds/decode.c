@@ -168,7 +168,7 @@ static void n3ds_decoder_cleanup() {
 
 static int n3ds_decoder_submit_decode_unit(PDECODE_UNIT decodeUnit) {
   if (decodeUnit->fullLength > DECODER_BUFFER_SIZE) {
-    fprintf(stderr, "Video bitstream buffer too small\n");
+    fprintf(stderr, "Video decode buffer too small\n");
     return DR_OK;
   }
 
