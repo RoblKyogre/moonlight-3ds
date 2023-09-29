@@ -52,7 +52,7 @@ static uint32_t queueWriteIndex;
 static uint32_t queueReadIndex;
 
 const Tex3DS_SubTexture subtex = {
-  512, 256,
+  256, 512,
   0.0f, 1.0f, 1.0f, 0.0f
 };
 
@@ -72,8 +72,8 @@ void n3ds_stream_init(uint32_t width, uint32_t height)
 
   img.subtex = &subtex;
 
-  screenParams.pos.x = 0.0f;
-  screenParams.pos.y = 0.0f;
+  screenParams.pos.x = 0;
+  screenParams.pos.y = 0;
   screenParams.pos.w = 400;
   screenParams.pos.h = 240;
   
@@ -142,10 +142,13 @@ void n3ds_stream_draw(void)
       // display thread is behind decoder, skip frame
     }
     else {
+      printf("drawing frame...\n");
       img.tex = tex;
+      printf("Texture pointer: %d\n", C3D_Tex2DGetImagePtr(img.tex, 0, NULL));
       C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
       C2D_TargetClear(topScreen, C2D_Color32f(0,0,0,1));
       C2D_SceneBegin(topScreen);
+      C2D_DrawRectSolid(0, 0, 0.0f, 400, 240, C2D_Color32f(0.125f,1.0f,0.125f,1));
       C2D_DrawImage(img,&screenParams,NULL);
       C3D_FrameEnd(0);
     }

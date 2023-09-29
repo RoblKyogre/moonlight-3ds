@@ -42,8 +42,7 @@ void n3ds_setup_renderstate(void);
 #define MAX_QUEUEMESSAGES 16
 
 /*typedef struct {
-//  GX2Texture yTex;
-//  GX2Texture uvTex;
+  C3D_Tex tex;
 } yuv_texture_t;*/
 
 void* get_frame(void);

@@ -4,6 +4,8 @@
 
 #include <3ds.h>
 #include <3ds/types.h>
+#include <3ds/os.h>
+#include <3ds/gfx.h>
 #include <3ds/services/mvd.h>
 #include <3ds/allocator/linear.h>
 //#include <citro3d.h>
@@ -33,48 +35,11 @@ static MVDSTD_Config config;
 static uint8_t* outBuf;
 static uint8_t* inBuf;
 
-/*static void createYUVTextures(GX2Texture* yPlane, GX2Texture* uvPlane, uint32_t width, uint32_t height)
+/*static void createYUVTextures(C3D_Tex* tex, uint32_t width, uint32_t height)
 {
-  memset(yPlane, 0, sizeof(GX2Texture));
-  memset(uvPlane, 0, sizeof(GX2Texture));
-
-  // make sure the height is aligned properly for the output
-  height = H264_FRAME_HEIGHT(height);
-
-  // create Y texture
-  yPlane->surface.dim = GX2_SURFACE_DIM_TEXTURE_2D;
-  yPlane->surface.use = GX2_SURFACE_USE_TEXTURE;
-  yPlane->surface.format = GX2_SURFACE_FORMAT_UNORM_R8;
-  yPlane->surface.tileMode = GX2_TILE_MODE_LINEAR_ALIGNED;
-  yPlane->surface.depth = 1;
-  yPlane->surface.width = width;
-  yPlane->surface.height = height;
-  yPlane->surface.mipLevels = 1;
-  yPlane->viewNumSlices = 1;
-  yPlane->viewNumMips = 1;
-  yPlane->compMap = GX2_COMP_MAP(GX2_SQ_SEL_R, GX2_SQ_SEL_0, GX2_SQ_SEL_0, GX2_SQ_SEL_1);
-  GX2CalcSurfaceSizeAndAlignment(&yPlane->surface);
-  GX2InitTextureRegs(yPlane);
-
-  // create UV texture
-  uvPlane->surface.dim = GX2_SURFACE_DIM_TEXTURE_2D;
-  uvPlane->surface.use = GX2_SURFACE_USE_TEXTURE;
-  uvPlane->surface.format = GX2_SURFACE_FORMAT_UNORM_R8_G8;
-  uvPlane->surface.tileMode = GX2_TILE_MODE_LINEAR_ALIGNED;
-  uvPlane->surface.depth = 1;
-  uvPlane->surface.width = width / 2;
-  uvPlane->surface.height = height / 2;
-  uvPlane->surface.mipLevels = 1;
-  uvPlane->viewNumSlices = 1;
-  uvPlane->viewNumMips = 1;
-  uvPlane->compMap = GX2_COMP_MAP(GX2_SQ_SEL_R, GX2_SQ_SEL_G, GX2_SQ_SEL_0, GX2_SQ_SEL_1);
-  GX2CalcSurfaceSizeAndAlignment(&uvPlane->surface);
-  GX2InitTextureRegs(uvPlane);
-
-  yPlane->surface.image = memalign(H264_MEM_ALIGNMENT, H264_FRAME_SIZE(H264_FRAME_PITCH(width), height));
-  GX2Invalidate(GX2_INVALIDATE_MODE_CPU_TEXTURE, yPlane->surface.image, H264_FRAME_SIZE(H264_FRAME_PITCH(width), height));
-
-  uvPlane->surface.image = yPlane->surface.image + yPlane->surface.imageSize;
+  C3D_TexInit(tex, height, width, GPU_RGB565);
+  C3D_TexSetFilter(tex, GPU_NEAREST, GPU_NEAREST);
+  C3D_TexSetWrap(tex, GPU_CLAMP_TO_BORDER, GPU_CLAMP_TO_BORDER);
 }*/
 
 static int n3ds_decoder_setup(int videoFormat, int width, int height, int redrawRate, void* context, int drFlags) {
@@ -96,7 +61,7 @@ static int n3ds_decoder_setup(int videoFormat, int width, int height, int redraw
   //}
   
   fprintf(stderr, "Initing mvd...\n");
-  int res = mvdstdInit(MVDMODE_VIDEOPROCESSING, MVD_INPUT_H264, MVD_OUTPUT_BGR565, MVD_DEFAULT_WORKBUF_SIZE, NULL);
+  int res = mvdstdInit(MVDMODE_VIDEOPROCESSING, MVD_INPUT_H264, MVD_OUTPUT_RGB565, MVD_DEFAULT_WORKBUF_SIZE, NULL);
   if (res != 0) {
     printf("mvd_3ds: Error initializing decoder 0x%07X\n", res);
     return -1;
@@ -129,15 +94,16 @@ static int n3ds_decoder_setup(int videoFormat, int width, int height, int redraw
   //  return -1;
   //}
 
-  /*for (int i = 0; i < NUM_BUFFERS; i++) {
-    createYUVTextures(&textures[i].yTex, &textures[i].uvTex, width, height);
-
-    res = H264DECCheckMemSegmentation(textures[i].yTex.surface.image, H264_FRAME_SIZE(H264_FRAME_PITCH(width), height));
-    if (res != 0) {
-      printf("h264_wiiu: Invalid texture memory segmentation 0x%07X\n", res);
+  for (int i = 0; i < NUM_BUFFERS; i++) {
+    memset(&textures[i], 0, sizeof(C3D_Tex));
+    res = C3D_TexInit(&textures[i], 256, 512, GPU_RGB565);
+    if (!res) {
+      printf("mvd_3ds: Error initializing texture %d\n", i);
       return -1;
     }
-  }*/
+    C3D_TexSetFilter(&textures[i], GPU_NEAREST, GPU_NEAREST);
+    C3D_TexSetWrap(&textures[i], GPU_CLAMP_TO_BORDER, GPU_CLAMP_TO_BORDER);
+  }
   currentTexture = 0;
 
   inBuf = linearMemAlign(DECODER_BUFFER_SIZE + 64, H264_MEM_ALIGNMENT);
@@ -150,9 +116,6 @@ static int n3ds_decoder_setup(int videoFormat, int width, int height, int redraw
 }
 
 static void n3ds_decoder_cleanup() {
-  //H264DECFlush(decoder);
-  //H264DECEnd(decoder);
-  //H264DECClose(decoder);
   mvdstdExit();
 
   linearFree(outBuf);
@@ -160,10 +123,9 @@ static void n3ds_decoder_cleanup() {
   linearFree(inBuf);
   inBuf = NULL;
 
-  /*for (int i = 0; i < NUM_BUFFERS; i++) {
-    free(textures[i].yTex.surface.image);
-    textures[i].yTex.surface.image = NULL;
-  }*/
+  for (int i = 0; i < NUM_BUFFERS; i++) {
+    C3D_TexDelete(&textures[i]);
+  }
 }
 
 static int n3ds_decoder_submit_decode_unit(PDECODE_UNIT decodeUnit) {
@@ -182,8 +144,8 @@ static int n3ds_decoder_submit_decode_unit(PDECODE_UNIT decodeUnit) {
 
   MVDSTD_ProcessNALUnitOut tmpout;
 
-  int res = mvdstdProcessVideoFrame(inBuf+4, length, 0, &tmpout);
-  if (!MVD_CHECKNALUPROC_SUCCESS(res)) {
+  int res = mvdstdProcessVideoFrame(inBuf, length, 0, &tmpout);
+  if (res!=MVD_STATUS_FRAMEREADY) {
     printf("mvd_3ds: Error processing frame 0x%07X\n", res);
     return DR_NEED_IDR;
   }
@@ -195,8 +157,8 @@ static int n3ds_decoder_submit_decode_unit(PDECODE_UNIT decodeUnit) {
     printf("mvd_3ds: Error rendering frame 0x%07X\n", res);
     return DR_NEED_IDR;
   }
-  
-  C3D_TexLoadImage(tex, outBuf, GPU_TEXFACE_2D, 0);
+
+  C3D_TexUpload(tex, outBuf);
   
   nextFrame++;
 
