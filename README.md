@@ -1,4 +1,5 @@
-# Warning: Project is not currently in a usable state (it compiles, but it is currently broken)
+Note: I'm no longer working on this paricular port of moonlight for the 3DS.
+Check out [zoeyjodon's port](https://github.com/zoeyjodon/moonlight-N3DS/tree/n3ds-main) for a currently working version instead!
 
 # Moonlight 3DS
 
